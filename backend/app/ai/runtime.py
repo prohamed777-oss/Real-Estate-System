@@ -64,13 +64,19 @@ CONTEXT_BUDGET_TOKENS = 8000
 def build_system_context(
     *, profile: AgentProfile, person_context: dict[str, Any] | None,
     recent_messages: list[dict[str, Any]] | None, policies: list[str] | None = None,
+    knowledge: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     """Context Engine (§56): current message + recent conversation + structured
-    lead state + relevant facts + policies — with a token budget. NEVER the
-    entire history (§56, §109)."""
+    lead state + relevant facts + KNOWLEDGE (§57) + policies — with a token
+    budget. NEVER the entire history (§56, §109)."""
     sections = [profile.system_prompt]
     if policies:
         sections.append("POLICIES:\n" + "\n".join(f"- {p}" for p in policies))
+    if knowledge:
+        chunks = "\n---\n".join(k["text"] for k in knowledge[:3])
+        sections.append(
+            "KNOWLEDGE (verified internal docs — cite only what is here):\n" + chunks[:3500]
+        )
     if person_context:
         sections.append(
             "CUSTOMER CONTEXT (structured, authoritative):\n"
@@ -81,6 +87,30 @@ def build_system_context(
         convo = "\n".join(f"{m['direction']}: {m.get('text') or '[media]'}" for m in trimmed)
         sections.append("RECENT CONVERSATION:\n" + convo[:3000])
     return [{"role": "system", "content": "\n\n".join(sections)}]
+
+
+async def retrieve_knowledge(
+    session: AsyncSession, *, tenant_id: uuid.UUID, query_text: str, limit: int = 3,
+) -> list[dict[str, Any]]:
+    """Semantic retrieval over knowledge_chunks (§57, §85)."""
+    from sqlalchemy import select
+
+    from app.ai.embeddings import get_embedding_provider
+    from app.ai.models import KnowledgeChunk
+
+    if not query_text.strip():
+        return []
+    provider = get_embedding_provider()
+    vec = (await provider.embed([query_text[:2000]]))[0]
+    rows = (
+        await session.execute(
+            select(KnowledgeChunk)
+            .where(KnowledgeChunk.tenant_id == tenant_id)
+            .order_by(KnowledgeChunk.embedding.cosine_distance(vec))
+            .limit(limit)
+        )
+    ).scalars().all()
+    return [{"text": r.text, "chunk_no": r.chunk_no, "doc_id": str(r.doc_id)} for r in rows]
 
 
 async def execute_agent(
@@ -106,6 +136,11 @@ async def execute_agent(
     messages: list[dict[str, Any]] = build_system_context(
         profile=profile, person_context=None, recent_messages=history,
         policies=list((profile.guardrails or {}).get("policies", [])) or None,
+        knowledge=(
+            await retrieve_knowledge(session, tenant_id=tenant_id, query_text=user_message)
+            if (profile.knowledge_scopes or []) and tenant_id is not None
+            else None
+        ),
     )
     messages.append({"role": "user", "content": user_message})
 

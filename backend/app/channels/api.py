@@ -214,12 +214,22 @@ async def send_message(
 ) -> dict[str, Any]:
     if not body.text and not body.media_url:
         raise ValidationFailed("text or media_url required")
-    return await send_outbound_message(
+    # §98-100 gates: monthly message quota + per-tenant rate limit
+    from app.analytics.billing import check_quota, record_usage
+    from app.core.ratelimit import check_rate_limit
+
+    await check_quota(session, tenant_id=auth.tenant_id, kind="messages")
+    await check_rate_limit(
+        session, key=f"tenant:{auth.tenant_id}:send", limit=60, window_seconds=60
+    )
+    result = await send_outbound_message(
         session, tenant_id=auth.tenant_id, conversation_id=body.conversation_id,
         sender_type="user", sender_id=str(auth.user_id), text=body.text,
         message_type=body.message_type, media_url=body.media_url,
         idempotency_ref=request_id(auth),
     )
+    await record_usage(session, tenant_id=auth.tenant_id, kind="messages")
+    return result
 
 
 def request_id(auth: AuthContext) -> str:

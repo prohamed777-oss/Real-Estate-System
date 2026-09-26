@@ -56,6 +56,21 @@ async def _schema():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
+        # migration-managed generated columns/indexes (§24) applied manually here
+        await conn.execute(text("""
+            ALTER TABLE property_assets ADD COLUMN IF NOT EXISTS search_vector tsvector
+            GENERATED ALWAYS AS (
+                to_tsvector('simple',
+                    coalesce(title, '') || ' ' ||
+                    coalesce(location->>'city', '') || ' ' ||
+                    coalesce(location->>'area', '') || ' ' ||
+                    coalesce(location->>'compound', '')
+                )
+            ) STORED
+        """))
+        await conn.execute(text(
+            "CREATE INDEX IF NOT EXISTS ix_assets_fts ON property_assets USING GIN (search_vector)"
+        ))
     # Seed global agent profiles (normally done by app lifespan)
     from app.core.db import session_factory as sf
 

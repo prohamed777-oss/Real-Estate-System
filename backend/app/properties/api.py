@@ -165,6 +165,7 @@ async def list_assets(
     project_id: uuid.UUID | None = None,
     city: str | None = None,
     min_bedrooms: int | None = None,
+    q: str | None = None,
     limit: int = Query(default=50, le=200),
     cursor: str | None = None,
 ) -> CursorPage:
@@ -183,6 +184,15 @@ async def list_assets(
         query = query.where(PropertyAsset.bedrooms >= min_bedrooms)
     if city:
         query = query.where(PropertyAsset.location["city"].astext.ilike(f"%{city}%"))
+    if q:
+        # Full-text search (§24): ranked lexical search over the generated tsvector
+        sv = PropertyAsset.__table__.c.search_vector
+        tsq = func.websearch_to_tsquery("simple", q)
+        query = query.where(sv.op("@@")(tsq)).order_by(
+            func.ts_rank(sv, tsq).desc(),
+            PropertyAsset.created_at.desc(),
+            PropertyAsset.id.desc(),
+        )
     rows = (await session.execute(query.limit(limit))).scalars().all()
     items = [
         {

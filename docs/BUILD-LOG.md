@@ -2,6 +2,24 @@
 
 Delivery log per milestone with acceptance evidence.
 
+## Completion Wave — full architecture parity (§19, §24, §36, §40-42, §57, §63, §98-100) ✅
+- **Supabase deployed for real**: 81 tables + 72 tenant_isolation RLS policies + pgvector,
+  applied via Management API (scripts/supabase_apply.py), alembic_version in lockstep with local
+- **FTS (§24)**: generated tsvector + GIN on property_assets, websearch_to_tsquery + ts_rank in /assets?q=
+- **Documents (§36)**: versions (new version invalidates approvals), approvals gate facts_verified (§85),
+  signatures with double-sign protection + evidence
+- **Reconciliation (§19)**: source precedence (developer > erp > partner > manual), freshness +
+  confidence tie-break, auto-resolve only when unambiguous, manual review otherwise, full audit
+- **Attribution (§41)**: first-touch immutable / last-touch updates, captured automatically on lead.created
+- **Content engine (§42)**: AI generate → born DRAFT → review/approve → publish (publish blocked pre-approval)
+- **Knowledge RAG (§57)**: semantic retrieval (pgvector cosine) injected into agent context per profile
+- **AI Evaluation (§63)**: eval runner with tool-selection accuracy, response quality, escalation checks
+- **Billing (§99)**: plans (trial/starter/pro/enterprise) with monthly quotas enforced on AI + messaging
+- **Rate limiting (§98)**: DB-backed fixed-window counters, per-tenant keys, applied to AI + send
+- **Feature flags (§100)**: enforced on gated agents (e.g. ai_reactivation)
+- **Tests: 65 green** (12 new: FTS, documents, reconciliation, attribution, content gate,
+  knowledge retrieval, eval runner, quota exhaustion + plan upgrade, rate window, AI quota 429)
+
 ## M1 — Platform Core ✅
 - Multi-tenant tenancy (ContextVar + per-request GUC + RLS §82)
 - Transactional outbox + exactly-once processing + retry/backoff/DLQ

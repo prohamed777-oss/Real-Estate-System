@@ -15,6 +15,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    text as sa_text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -165,3 +166,21 @@ class FeatureFlag(Base, UUIDPk, Timestamped):
     key: Mapped[str] = mapped_column(String(100))
     enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     rollout: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+
+
+class RateLimitCounter(Base):
+    """Fixed-window rate limit counters (§98) — serverless-safe, DB-backed."""
+
+    __tablename__ = "rate_limit_counters"
+    __table_args__ = (
+        UniqueConstraint("bucket_key", "window_start", name="uq_rate_bucket"),
+        Index("ix_rate_window", "window_start"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4,
+        server_default=sa_text("gen_random_uuid()"),
+    )
+    bucket_key: Mapped[str] = mapped_column(String(200))
+    window_start: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    count: Mapped[int] = mapped_column(Integer, default=0)

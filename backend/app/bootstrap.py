@@ -21,6 +21,7 @@ HANDLER_MODULES = [
     "app.matching.handlers",
     "app.sales.handlers",
     "app.finance.handlers",
+    "app.marketing.handlers",
 ]
 
 
@@ -51,13 +52,17 @@ ROUTER_MODULES = [
     "app.conversations.api",
     "app.channels.api",
     "app.properties.api",
+    "app.properties.reconciliation_api",
     "app.listings.api",
     "app.matching.api",
     "app.sales.api",
     "app.finance.api",
+    "app.finance.documents_api",
+    "app.marketing.api",
     "app.automation.api",
     "app.ai.api",
     "app.analytics.api",
+    "app.analytics.billing_api",
     "app.importer.api",
 ]
 

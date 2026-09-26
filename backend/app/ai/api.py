@@ -36,6 +36,31 @@ async def execute(
     auth: AuthContext = Depends(require(AI_RUN)),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
+    # §98-100 gates: feature flag → monthly quota → rate limit → metered usage
+    from app.analytics.billing import check_quota, record_usage
+    from app.core.ratelimit import check_rate_limit
+    from app.organizations.models import FeatureFlag
+
+    flag_key = {"reactivation": "ai_reactivation"}.get(key)
+    if flag_key:
+        flag = (
+            await session.execute(
+                select(FeatureFlag).where(
+                    FeatureFlag.tenant_id == auth.tenant_id, FeatureFlag.key == flag_key
+                )
+            )
+        ).scalar_one_or_none()
+        if flag is not None and not flag.enabled:
+            from app.core.errors import DomainError
+
+            raise DomainError(
+                f"Feature {flag_key} is disabled for this tenant (§100)",
+                code="feature_disabled", status_code=403,
+            )
+    await check_quota(session, tenant_id=auth.tenant_id, kind="ai_requests")
+    await check_rate_limit(
+        session, key=f"tenant:{auth.tenant_id}:ai", limit=30, window_seconds=60
+    )
     profile = await get_profile(session, auth.tenant_id, key)
     result = await execute_agent(
         session, tenant_id=auth.tenant_id, profile=profile, user_message=body.message,
@@ -43,7 +68,35 @@ async def execute(
         permissions=set(auth.permissions), history=body.history,
         high_value_approved=body.high_value_approved,
     )
+    await record_usage(session, tenant_id=auth.tenant_id, kind="ai_requests",
+                       cost_usd=0.0)
     return result.to_dict()
+
+
+@router.post("/evals/run")
+async def run_eval(
+    body: dict[str, Any],
+    auth: AuthContext = Depends(require(AI_RUN)),
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    """§63: evaluation suite — gate for any new agent/prompt version."""
+    from app.ai.evaluation import run_evaluation
+
+    agent_key = body.get("agent_key")
+    cases = body.get("cases") or []
+    if not agent_key or not cases:
+        from app.core.errors import ValidationFailed
+
+        raise ValidationFailed("agent_key and cases are required")
+    run = await run_evaluation(
+        session, tenant_id=auth.tenant_id, agent_key=agent_key, cases=cases,
+        dataset_name=body.get("dataset_name", "adhoc"),
+    )
+    return {
+        "id": str(run.id), "agent_key": run.agent_key, "agent_version": run.agent_version,
+        "metrics": run.metrics,
+        "cases": run.cases,
+    }
 
 
 @router.get("/agents")
