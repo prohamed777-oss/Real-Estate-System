@@ -204,6 +204,39 @@ async def add_identity(
     return {"id": str(identity.id), "channel": identity.channel, "external_id": identity.external_id}
 
 
+# ---------- dedup & merge (real CRM necessity) ----------
+@router.get("/duplicates")
+async def list_duplicates(
+    auth: AuthContext = Depends(require(PEOPLE_READ)),
+    session: AsyncSession = Depends(get_session),
+) -> list[dict[str, Any]]:
+    """Groups of active persons sharing a normalized phone or email."""
+    from app.identity.merge import find_duplicates
+
+    return await find_duplicates(session, tenant_id=auth.tenant_id)
+
+
+class MergeIn(BaseModel):
+    duplicate_id: uuid.UUID
+
+
+@router.post("/{person_id}/merge")
+async def merge_person(
+    person_id: uuid.UUID,
+    body: MergeIn,
+    auth: AuthContext = Depends(require(PEOPLE_WRITE)),
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    """Merge duplicate INTO person_id: identities/leads/conversations/opportunities move."""
+    from app.identity.merge import merge_persons
+
+    primary = await merge_persons(
+        session, tenant_id=auth.tenant_id, primary_id=person_id,
+        duplicate_id=body.duplicate_id, actor_id=auth.user_id,
+    )
+    return {"id": str(primary.id), "full_name": primary.full_name, "status": primary.status}
+
+
 @router.put("/{person_id}/consents")
 async def set_consent(
     person_id: uuid.UUID,

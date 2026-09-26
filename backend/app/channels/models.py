@@ -13,6 +13,29 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.core.db import Base, Timestamped, UUIDPk
 
 
+class MessageTemplate(Base, UUIDPk, Timestamped):
+    """WhatsApp business-initiated messages require approved templates (Meta).
+
+    body uses {{variable}} placeholders. status mirrors the Meta review
+    lifecycle; local 'approved' templates are usable immediately.
+    """
+
+    __tablename__ = "message_templates"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "name", "language", name="uq_templates_name_lang"),
+    )
+
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tenants.id"), index=True)
+    name: Mapped[str] = mapped_column(String(120))
+    language: Mapped[str] = mapped_column(String(10), default="ar")
+    category: Mapped[str] = mapped_column(String(40), default="UTILITY")  # MARKETING|UTILITY|AUTHENTICATION
+    body: Mapped[str] = mapped_column(Text)  # "مرحبًا {{name}}، وحدة {{unit}} متاحة..."
+    variables: Mapped[list] = mapped_column(JSONB, default=list)  # ["name", "unit"]
+    status: Mapped[str] = mapped_column(String(20), default="draft")  # draft|approved|rejected|paused
+    external_id: Mapped[str | None] = mapped_column(String(200))  # Meta template id
+    created_by: Mapped[str | None] = mapped_column(String(64))
+
+
 class ChannelAccount(Base, UUIDPk, Timestamped):
     """Per-tenant provider connection (credentials shell — real creds wired at
     integration time by the owner)."""

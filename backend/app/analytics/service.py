@@ -250,6 +250,23 @@ async def execute_query_plan(session: AsyncSession, tenant_id: uuid.UUID,
         )
     rows = (await session.execute(query.limit(plan.get("limit", 50)))).all()
 
+    # one grouped query for last-inbound per person (no N+1)
+    person_ids = [lead.person_id for lead, _req in rows]
+    last_inbound_map: dict[uuid.UUID, datetime] = {}
+    if person_ids:
+        last_rows = (
+            await session.execute(
+                select(Conversation.person_id, func.max(Message.created_at))
+                .join(Message, Message.conversation_id == Conversation.id)
+                .where(
+                    Conversation.person_id.in_(person_ids),
+                    Message.direction == "inbound",
+                )
+                .group_by(Conversation.person_id)
+            )
+        ).all()
+        last_inbound_map = {pid: ts for pid, ts in last_rows}
+
     out = []
     now = datetime.now(UTC)
     for lead, req in rows:
@@ -260,17 +277,7 @@ async def execute_query_plan(session: AsyncSession, tenant_id: uuid.UUID,
             "bedrooms": (req.explicit or {}).get("bedrooms") if req else None,
         }
         if "no_contact_days" in filters:
-            # last inbound message across the person's conversations
-            last_inbound = (
-                await session.execute(
-                    select(func.max(Message.created_at))
-                    .join(Conversation, Conversation.id == Message.conversation_id)
-                    .where(
-                        Conversation.person_id == lead.person_id,
-                        Message.direction == "inbound",
-                    )
-                )
-            ).scalar_one_or_none()
+            last_inbound = last_inbound_map.get(lead.person_id)
             days_silent = (now - last_inbound).days if last_inbound else None
             if days_silent is None or days_silent < filters["no_contact_days"]:
                 continue

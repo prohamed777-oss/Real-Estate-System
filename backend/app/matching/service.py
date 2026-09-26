@@ -172,11 +172,29 @@ async def run_matching(session: AsyncSession, *, tenant_id: uuid.UUID, lead_id: 
     requirements: dict[str, Any] = (req_row.explicit if req_row else {}) or {}
     behavioral: dict[str, Any] = (req_row.behavioral if req_row else {}) or {}
 
-    docs = (
-        await session.execute(
-            select(PropertySearchDocument).where(PropertySearchDocument.tenant_id == tenant_id)
-        )
-    ).scalars().all()
+    lead_emb_row = (
+        await session.execute(select(LeadEmbedding).where(LeadEmbedding.lead_id == lead_id))
+    ).scalar_one_or_none()
+
+    # SQL-side vector KNN pushdown (pgvector <=>): shortlist via index instead of
+    # loading every document — Python scores only the shortlist.
+    if lead_emb_row is not None and lead_emb_row.embedding is not None:
+        docs = (
+            await session.execute(
+                select(PropertySearchDocument)
+                .where(PropertySearchDocument.tenant_id == tenant_id)
+                .order_by(PropertySearchDocument.embedding.cosine_distance(lead_emb_row.embedding))
+                .limit(60)
+            )
+        ).scalars().all()
+    else:
+        docs = (
+            await session.execute(
+                select(PropertySearchDocument)
+                .where(PropertySearchDocument.tenant_id == tenant_id)
+                .limit(300)
+            )
+        ).scalars().all()
     doc_list = [d.doc | {"asset_id": str(d.asset_id), "embedding": d.embedding} for d in docs]
 
     asset_ids = [uuid.UUID(d["asset_id"]) for d in doc_list]
@@ -184,9 +202,6 @@ async def run_matching(session: AsyncSession, *, tenant_id: uuid.UUID, lead_id: 
         await check_availability(session, tenant_id=tenant_id, asset_ids=asset_ids)
         if asset_ids else {}
     )
-    lead_emb_row = (
-        await session.execute(select(LeadEmbedding).where(LeadEmbedding.lead_id == lead_id))
-    ).scalar_one_or_none()
 
     results = rank_candidates(
         docs=doc_list,

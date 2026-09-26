@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     # --- Channels ---
     meta_webhook_verify_token: str = "dev-verify-token"
 
+    # --- Encryption at rest for provider credentials ---
+    secret_encryption_key: str = ""  # Fernet key or passphrase; empty = derived (dev)
+
     # --- AI (Model Gateway) ---
     ai_provider: str = "mock"  # mock | gemini | openai_compatible
     gemini_api_key: str = ""

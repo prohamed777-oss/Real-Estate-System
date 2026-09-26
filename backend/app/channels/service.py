@@ -238,7 +238,9 @@ async def dispatch_message(session: AsyncSession, *, tenant_id: uuid.UUID, messa
         return
     _, ident = identity
 
-    adapter = get_adapter(account.provider, account.config)
+    from app.core.crypto import decrypt_config
+
+    adapter = get_adapter(account.provider, decrypt_config(account.config))
     try:
         if msg.message_type == "text" or not (msg.attachments and msg.attachments[0].get("media_url")):
             result = await adapter.send_text(ident.external_id, msg.text or "", idempotency_ref=msg.idempotency_ref)
@@ -281,6 +283,8 @@ async def connect_channel_account(
     session: AsyncSession, *, tenant_id: uuid.UUID, channel: str, provider: str,
     config: dict[str, Any], display_name: str | None = None, actor_id: uuid.UUID | str | None = None,
 ) -> ChannelAccount:
+    from app.core.crypto import encrypt_config
+
     account = (
         await session.execute(
             select(ChannelAccount).where(
@@ -292,7 +296,7 @@ async def connect_channel_account(
     if account is None:
         account = ChannelAccount(tenant_id=tenant_id, channel=channel, provider=provider)
         session.add(account)
-    account.config = config
+    account.config = encrypt_config(config)  # secrets encrypted at rest
     account.display_name = display_name
     account.status = "connected"
     await audit(

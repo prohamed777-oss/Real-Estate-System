@@ -409,3 +409,51 @@ async def transition_reservation(
                  "to": reservation.status, "reason": reason},
     )
     return reservation
+
+
+async def generate_offer_document(
+    session: AsyncSession, *, tenant_id: uuid.UUID, offer_id: uuid.UUID, actor_id=None,
+) -> dict[str, Any]:
+    """Render an RTL offer document from the IMMUTABLE offer snapshot and file it
+    as a managed Document (§36) — an offer worth sending is a document, not text."""
+    offer = (
+        await session.execute(
+            select(Offer).where(Offer.id == offer_id, Offer.tenant_id == tenant_id)
+        )
+    ).scalar_one_or_none()
+    if offer is None:
+        raise NotFound("Offer not found")
+    captured = (offer.price_snapshot or {}).get("captured_at", "")
+    html = f"""<!DOCTYPE html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<title>عرض سعر {offer.version}</title>
+<style>
+body{{font-family:'Cairo',sans-serif;padding:40px;color:#0f172a}}
+.card{{border:1px solid #e2e8f0;border-radius:16px;padding:24px;max-width:720px}}
+.price{{font-size:28px;font-weight:800;color:#047857}}
+table{{width:100%;border-collapse:collapse;margin-top:12px}}
+td,th{{border:1px solid #e2e8f0;padding:8px;text-align:start;font-size:14px}}
+</style></head><body>
+<div class="card">
+<h1>عرض سعر عقاري — الإصدار {offer.version}</h1>
+<table>
+<tr><th>السعر</th><td class="price">{offer.price_amount:,.0f} {offer.price_currency}</td></tr>
+<tr><th>خطة السداد</th><td>{offer.payment_plan_snapshot or 'نقدي / حسب الاتفاق'}</td></tr>
+<tr><th>الشروط</th><td>{offer.terms or '—'}</td></tr>
+<tr><th>صالح حتى</th><td>{offer.validity_until.strftime('%Y-%m-%d') if offer.validity_until else '—'}</td></tr>
+<tr><th>حالة العرض</th><td>{offer.status}</td></tr>
+</table>
+<p style="margin-top:16px;font-size:12px;color:#64748b">
+هذا العرض مُولَّد آليًا من نظام إيرادات العقارات، ويحمل نسخة سعر ثابتة ({captured}).
+</p>
+</div></body></html>"""
+    from app.finance.documents_service import create_document
+
+    doc = await create_document(
+        session, tenant_id=tenant_id, kind="offer",
+        title=f"عرض سعر v{offer.version} — {str(offer_id)[:8]}",
+        entity_type="offer", entity_id=offer_id, actor_id=actor_id,
+    )
+    doc.metadata_ = {"html": html, "generated": True}
+    await session.flush()
+    return {"document_id": str(doc.id), "status": doc.status, "html_length": len(html)}

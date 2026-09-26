@@ -29,11 +29,13 @@ CORE_MODEL_MODULES = [
     "app.conversations.models",
     "app.channels.models",
     "app.properties.models",
+    "app.properties.models_ext",
     "app.listings.models",
     "app.matching.models",
     "app.sales.models",
     "app.finance.models",
     "app.marketing.models",
+    "app.marketing.models_ext",
     "app.automation.models",
     "app.ai.models",
     "app.analytics.models",
@@ -48,13 +50,12 @@ async def _schema():
     from app.core.db import Base, engine
 
     for module in CORE_MODEL_MODULES:
-        try:
-            importlib.import_module(module)
-        except ModuleNotFoundError as exc:
-            if exc.name and exc.name != module and not module.startswith(exc.name):
-                raise
+        importlib.import_module(module)
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
+        # bulletproof reset: nuke everything including late-registered tables
+        await conn.execute(text("DROP SCHEMA public CASCADE"))
+        await conn.execute(text("CREATE SCHEMA public"))
+        await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
         await conn.run_sync(Base.metadata.create_all)
         # migration-managed generated columns/indexes (§24) applied manually here
         await conn.execute(text("""

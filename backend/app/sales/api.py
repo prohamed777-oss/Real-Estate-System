@@ -389,3 +389,17 @@ async def do_reservation_transition(
         reason=body.get("reason"),
     )
     return {"id": str(reservation.id), "status": reservation.status}
+
+
+@router.post("/offers/{offer_id}/document", status_code=201)
+async def post_offer_document(
+    offer_id: uuid.UUID,
+    auth: AuthContext = Depends(require(OFFERS_WRITE)),
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    """Generate the RTL offer document from the immutable snapshot (§36)."""
+    from app.sales.service import generate_offer_document
+
+    return await generate_offer_document(
+        session, tenant_id=auth.tenant_id, offer_id=offer_id, actor_id=auth.user_id,
+    )

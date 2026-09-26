@@ -254,3 +254,69 @@ async def recent_webhooks(
          "received_at": w.received_at.isoformat(), "error": w.error}
         for w in rows
     ]
+
+
+# ---------- Message templates (Meta WhatsApp requirement) ----------
+class TemplateIn(BaseModel):
+    name: str
+    body: str
+    language: str = "ar"
+    category: str = "UTILITY"
+
+
+class TemplateSendIn(BaseModel):
+    conversation_id: uuid.UUID
+    template_name: str
+    variables: dict[str, Any] = {}
+    language: str = "ar"
+
+
+@router.post("/templates", status_code=201)
+async def post_template(
+    body: TemplateIn,
+    auth: AuthContext = Depends(require(SETTINGS_WRITE)),
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    from app.channels.templates import create_template, extract_variables
+
+    template = await create_template(
+        session, tenant_id=auth.tenant_id, name=body.name, body=body.body,
+        language=body.language, category=body.category,
+        created_by=str(auth.user_id),
+    )
+    return {"id": str(template.id), "name": template.name,
+            "variables": template.variables, "status": template.status}
+
+
+@router.get("/templates")
+async def list_templates(
+    auth: AuthContext = Depends(require(CONVERSATIONS_READ)),
+    session: AsyncSession = Depends(get_session),
+) -> list[dict[str, Any]]:
+    from app.channels.models import MessageTemplate
+
+    rows = (
+        await session.execute(
+            select(MessageTemplate).where(MessageTemplate.tenant_id == auth.tenant_id)
+        )
+    ).scalars().all()
+    return [
+        {"id": str(t.id), "name": t.name, "language": t.language, "category": t.category,
+         "status": t.status, "variables": t.variables, "body": t.body}
+        for t in rows
+    ]
+
+
+@router.post("/templates/send")
+async def send_template(
+    body: TemplateSendIn,
+    auth: AuthContext = Depends(require(CONVERSATIONS_WRITE)),
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    from app.channels.templates import send_templated_message
+
+    return await send_templated_message(
+        session, tenant_id=auth.tenant_id, conversation_id=body.conversation_id,
+        template_name=body.template_name, variables=body.variables,
+        language=body.language, sender_type="user", actor_id=auth.user_id,
+    )

@@ -24,6 +24,16 @@ router = APIRouter(prefix="/internal/jobs", tags=["internal"])
 
 
 async def _tick(session: AsyncSession) -> dict[str, Any]:
+    # Daily retention enqueue (unique_key dedup → runs once per day per tenant-agnostic)
+    from datetime import UTC, datetime
+
+    from app.events.queue import enqueue
+
+    today = datetime.now(UTC).strftime("%Y-%m-%d")
+    await enqueue(
+        session, job_type="maintenance.retention", tenant_id=None,
+        payload={}, unique_key=f"retention-{today}",
+    )
     requeued = await requeue_expired_leases(session)
     outbox_stats = await dispatch_batch(session)
     job_stats = await run_batch(session)
