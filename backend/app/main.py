@@ -22,6 +22,16 @@ log = logging.getLogger("revenue_os")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     log.info("starting %s (env=%s)", settings.app_name, settings.app_env)
+    # Seed global agent profiles (idempotent) — ONE runtime, many profiles
+    from app.ai.agents import seed_default_profiles
+    from app.core.db import session_factory
+
+    try:
+        async with session_factory() as session:
+            async with session.begin():
+                await seed_default_profiles(session)
+    except Exception as exc:  # noqa: BLE001 — DB may not be migrated yet on first boot
+        log.warning("profile seeding skipped: %s", exc)
     yield
     await engine.dispose()
 

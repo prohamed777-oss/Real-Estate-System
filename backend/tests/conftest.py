@@ -56,6 +56,14 @@ async def _schema():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
+    # Seed global agent profiles (normally done by app lifespan)
+    from app.core.db import session_factory as sf
+
+    async with sf() as s:
+        async with s.begin():
+            from app.ai.agents import seed_default_profiles
+
+            await seed_default_profiles(s)
     yield
     await engine.dispose()
 
@@ -70,6 +78,14 @@ async def _clean_db(_schema):
         cols = ", ".join(f'"{t}"' for t in tables)
         async with engine.begin() as conn:
             await conn.execute(text(f"TRUNCATE {cols} RESTART IDENTITY CASCADE"))
+    # Re-seed global agent profiles (truncation wiped them)
+    from app.core.db import session_factory as sf
+
+    async with sf() as s:
+        async with s.begin():
+            from app.ai.agents import seed_default_profiles
+
+            await seed_default_profiles(s)
 
 
 @pytest.fixture

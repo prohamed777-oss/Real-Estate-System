@@ -317,6 +317,60 @@ async def mark_reserved(
     return inv
 
 
+async def mark_contracted(
+    session: AsyncSession, *, tenant_id: uuid.UUID, asset_id: uuid.UUID,
+    contract_id: uuid.UUID | None = None, actor_id=None,
+) -> UnitInventory:
+    """RESERVED → CONTRACTED (§17) — called by the contract service."""
+    inv = await _lock_inventory(session, tenant_id, asset_id)
+    sm = InventoryStateMachine(inv.state)
+    if not sm.can("contract"):
+        raise Conflict(f"Cannot contract unit in state {inv.state}",
+                       details={"state": inv.state})
+    before = inv.state
+    sm.fire("contract")
+    inv.state = sm.state
+    inv.version += 1
+    await audit(
+        session, tenant_id=tenant_id, actor_type="user", actor_id=actor_id,
+        action="inventory.changed", entity_type="property_asset", entity_id=asset_id,
+        before={"state": before}, after={"state": "CONTRACTED",
+                                          "contract_id": str(contract_id) if contract_id else None},
+    )
+    await emit(
+        session, event_name=INVENTORY_EVENTS["contract"], tenant_id=tenant_id,
+        aggregate_type="property_asset", aggregate_id=asset_id,
+        payload={"asset_id": str(asset_id), "from": before, "to": "CONTRACTED"},
+    )
+    return inv
+
+
+async def mark_sold(
+    session: AsyncSession, *, tenant_id: uuid.UUID, asset_id: uuid.UUID, actor_id=None,
+) -> UnitInventory:
+    """CONTRACTED → SOLD (§17)."""
+    inv = await _lock_inventory(session, tenant_id, asset_id)
+    sm = InventoryStateMachine(inv.state)
+    if not sm.can("complete"):
+        raise Conflict(f"Cannot complete unit in state {inv.state}",
+                       details={"state": inv.state})
+    before = inv.state
+    sm.fire("complete")
+    inv.state = sm.state
+    inv.version += 1
+    await audit(
+        session, tenant_id=tenant_id, actor_type="user", actor_id=actor_id,
+        action="inventory.changed", entity_type="property_asset", entity_id=asset_id,
+        before={"state": before}, after={"state": "SOLD"},
+    )
+    await emit(
+        session, event_name=INVENTORY_EVENTS["complete"], tenant_id=tenant_id,
+        aggregate_type="property_asset", aggregate_id=asset_id,
+        payload={"asset_id": str(asset_id), "from": before, "to": "SOLD"},
+    )
+    return inv
+
+
 async def check_availability(session: AsyncSession, *, tenant_id: uuid.UUID,
                              asset_ids: list[uuid.UUID]) -> dict[str, dict]:
     """Read-tool availability check. Honors hold expiry (§104 freshness)."""
