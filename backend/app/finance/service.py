@@ -263,3 +263,40 @@ async def approve_commission(
         after={"amount": str(commission.amount)},
     )
     return commission
+
+
+async def write_commission_splits(
+    session: AsyncSession, *, tenant_id: uuid.UUID, deal_id: uuid.UUID,
+    splits: list[dict[str, Any]], actor_id=None,
+) -> list[CommissionSplit]:
+    """V4 1.29: financial splits enforced by the DB trigger —
+    SUM(share_percentage) per deal MUST equal 100.00 or the tx ROLLBACKS."""
+    from app.decision.models import CommissionSplit
+
+    if not splits:
+        raise ValidationFailed("splits required")
+    # replace existing splits for the deal (idempotent re-write)
+    existing = (
+        await session.execute(
+            select(CommissionSplit).where(CommissionSplit.deal_id == deal_id)
+        )
+    ).scalars().all()
+    for row in existing:
+        await session.delete(row)
+    await session.flush()
+    created = []
+    for s in splits:
+        row = CommissionSplit(
+            tenant_id=tenant_id, deal_id=deal_id,
+            party_role=s["party_role"], party_id=s.get("party_id"),
+            share_percentage=Decimal(str(s["share_percentage"])),
+        )
+        session.add(row)
+        created.append(row)
+    await session.flush()
+    await audit(
+        session, tenant_id=tenant_id, actor_type="user", actor_id=actor_id,
+        action="commission.splits_written", entity_type="deal", entity_id=deal_id,
+        after={"splits": splits},
+    )
+    return created

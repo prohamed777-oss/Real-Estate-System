@@ -44,7 +44,9 @@ async def emit(
     """
     if not event_name or len(event_name) > 150:
         raise DomainError(f"Invalid event name: {event_name!r}")
+    event_uuid = uuid.uuid4()
     row = OutboxEvent(
+        id=event_uuid,
         event_name=event_name,
         event_version=event_version,
         tenant_id=tenant_id,
@@ -55,6 +57,14 @@ async def emit(
         causation_id=causation_id,
     )
     session.add(row)
+    # Durable history (V4 4.1): the permanent append-only record — same tx.
+    from app.events.history import record_history
+
+    await record_history(
+        session, event_name=event_name, tenant_id=tenant_id, payload=payload,
+        aggregate_type=aggregate_type, aggregate_id=aggregate_id,
+        causation_id=causation_id, producer="revenue-os",
+    )
     await session.flush()
     return row.id
 

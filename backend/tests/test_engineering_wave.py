@@ -59,16 +59,16 @@ async def test_dlq_view_and_requeue(db, tenant, owner_ctx, api):
         async with s.begin():
             await run_batch(s)
     secret = {"X-Cron-Secret": "test-cron-secret"}
-    res = await api.get("/ops/dlq", headers=secret)
+    res = await api.get("/api/v1/ops/dlq", headers=secret)
     assert res.status_code == 200
     dead = res.json()["jobs"]
     assert any(j["type"] == "no.such.handler" for j in dead)
     dead_id = next(j["id"] for j in dead if j["type"] == "no.such.handler")
-    res2 = await api.post(f"/ops/dlq/jobs/{dead_id}/requeue", headers=secret)
+    res2 = await api.post(f"/api/v1/ops/dlq/jobs/{dead_id}/requeue", headers=secret)
     assert res2.status_code == 200
     assert res2.json()["status"] == "pending"
     # guarded
-    res3 = await api.get("/ops/dlq")
+    res3 = await api.get("/api/v1/ops/dlq")
     assert res3.status_code == 401
 
 
@@ -166,7 +166,7 @@ async def test_template_send_requires_approved_and_goes_through_pipeline(db, ten
 # ---------- media storage ----------
 async def test_media_upload_local_backend(api, db, tenant):
     res = await api.post(
-        "/ops/media",
+        "/api/v1/ops/media",
         files={"file": ("unit.jpg", b"\xff\xd8\xff\xe0-fake-jpeg", "image/jpeg")},
         headers={"X-Dev-Email": "owner@acme.test"},
     )

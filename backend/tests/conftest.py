@@ -23,6 +23,7 @@ from sqlalchemy import text
 
 CORE_MODEL_MODULES = [
     "app.events.models",
+    "app.events.history",
     "app.organizations.models",
     "app.identity.models",
     "app.leads.models",
@@ -30,6 +31,8 @@ CORE_MODEL_MODULES = [
     "app.channels.models",
     "app.properties.models",
     "app.properties.models_ext",
+    "app.decision.models",
+    "app.capability.models",
     "app.listings.models",
     "app.matching.models",
     "app.sales.models",
@@ -72,6 +75,44 @@ async def _schema():
         await conn.execute(text(
             "CREATE INDEX IF NOT EXISTS ix_assets_fts ON property_assets USING GIN (search_vector)"
         ))
+        # V4 1.29 trigger (migration-managed) applied manually here
+        await conn.execute(text("""
+            CREATE OR REPLACE FUNCTION check_commission_split_total() RETURNS trigger AS $$
+            DECLARE
+                total NUMERIC;
+            BEGIN
+                SELECT COALESCE(SUM(share_percentage), 0) INTO total
+                FROM commission_splits WHERE deal_id = NEW.deal_id;
+                IF total > 100.00 THEN
+                    RAISE EXCEPTION 'commission splits for deal % total % (must be exactly 100.00)',
+                        NEW.deal_id, total;
+                END IF;
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        """))
+        await conn.execute(text("""
+            CREATE TRIGGER trg_commission_split_total
+            AFTER INSERT OR UPDATE ON commission_splits
+            FOR EACH ROW EXECUTE FUNCTION check_commission_split_total();
+        """))
+        await conn.execute(text("""
+            CREATE OR REPLACE FUNCTION finalize_commission_splits(
+                p_deal_id UUID, p_agency_role TEXT DEFAULT 'agency'
+            ) RETURNS void AS $$
+            DECLARE
+                total NUMERIC;
+            BEGIN
+                SELECT COALESCE(SUM(share_percentage), 0) INTO total
+                FROM commission_splits WHERE deal_id = p_deal_id;
+                IF total <> 100.00 THEN
+                    UPDATE commission_splits
+                    SET share_percentage = share_percentage + (100.00 - total)
+                    WHERE deal_id = p_deal_id AND party_role = p_agency_role;
+                END IF;
+            END;
+            $$ LANGUAGE plpgsql;
+        """))
     # Seed global agent profiles (normally done by app lifespan)
     from app.core.db import session_factory as sf
 

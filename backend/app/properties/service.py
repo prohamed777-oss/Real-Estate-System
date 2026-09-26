@@ -22,6 +22,7 @@ from app.core.audit import audit
 from app.core.errors import Conflict, NotFound, ValidationFailed
 from app.events.outbox import emit
 from app.listings.models import Listing
+from app.decision.models import InventoryLedger
 from app.properties.models import (
     Building,
     Developer,
@@ -208,6 +209,20 @@ async def create_payment_plan(
 
 
 # ---------- inventory (§17-18): the transactional core ----------
+
+async def _ledger(
+    session: AsyncSession, *, tenant_id: uuid.UUID, asset_id: uuid.UUID,
+    from_state: str | None, to_state: str, actor_type: str = "user",
+    actor_id=None, reason: str | None = None, tx_id: str | None = None,
+) -> None:
+    """Append-only inventory ledger (V4 3.4) — written inside the same tx."""
+    session.add(InventoryLedger(
+        tenant_id=tenant_id, asset_id=asset_id, from_state=from_state,
+        to_state=to_state, actor_type=actor_type,
+        actor_id=str(actor_id) if actor_id else None, reason=reason, tx_id=tx_id,
+    ))
+    await session.flush()
+
 async def _lock_inventory(session: AsyncSession, tenant_id: uuid.UUID, asset_id: uuid.UUID) -> UnitInventory:
     """SELECT ... FOR UPDATE — serializes concurrent inventory mutations."""
     inv = (
@@ -240,6 +255,9 @@ async def hold_unit(
         inv.state = "HELD"
         inv.hold_id = hold.id
         inv.version += 1
+        await _ledger(session, tenant_id=tenant_id, asset_id=asset_id,
+                      from_state="AVAILABLE", to_state="HELD",
+                      actor_type="user", actor_id=created_by, reason=reason)
         await audit(
             session, tenant_id=tenant_id, actor_type="user", actor_id=created_by,
             action="inventory.changed", entity_type="property_asset", entity_id=asset_id,
@@ -279,6 +297,8 @@ async def release_unit(session: AsyncSession, *, tenant_id: uuid.UUID, asset_id:
         action="inventory.changed", entity_type="property_asset", entity_id=asset_id,
         before={"state": before}, after={"state": inv.state, "reason": reason},
     )
+    await _ledger(session, tenant_id=tenant_id, asset_id=asset_id,
+                  from_state=before, to_state=inv.state, actor_id=actor_id, reason=reason)
     await emit(
         session, event_name=INVENTORY_EVENTS["release"], tenant_id=tenant_id,
         aggregate_type="property_asset", aggregate_id=asset_id,
@@ -309,6 +329,8 @@ async def mark_reserved(
         action="inventory.changed", entity_type="property_asset", entity_id=asset_id,
         before={"state": before}, after={"state": "RESERVED", "reservation_id": str(reservation_id)},
     )
+    await _ledger(session, tenant_id=tenant_id, asset_id=asset_id,
+                  from_state=before, to_state="RESERVED", actor_type=actor_type, actor_id=actor_id)
     await emit(
         session, event_name=INVENTORY_EVENTS["reserve"], tenant_id=tenant_id,
         aggregate_type="property_asset", aggregate_id=asset_id,
@@ -337,6 +359,8 @@ async def mark_contracted(
         before={"state": before}, after={"state": "CONTRACTED",
                                           "contract_id": str(contract_id) if contract_id else None},
     )
+    await _ledger(session, tenant_id=tenant_id, asset_id=asset_id,
+                  from_state=before, to_state="CONTRACTED", actor_id=actor_id)
     await emit(
         session, event_name=INVENTORY_EVENTS["contract"], tenant_id=tenant_id,
         aggregate_type="property_asset", aggregate_id=asset_id,
@@ -363,6 +387,8 @@ async def mark_sold(
         action="inventory.changed", entity_type="property_asset", entity_id=asset_id,
         before={"state": before}, after={"state": "SOLD"},
     )
+    await _ledger(session, tenant_id=tenant_id, asset_id=asset_id,
+                  from_state=before, to_state="SOLD", actor_id=actor_id)
     await emit(
         session, event_name=INVENTORY_EVENTS["complete"], tenant_id=tenant_id,
         aggregate_type="property_asset", aggregate_id=asset_id,

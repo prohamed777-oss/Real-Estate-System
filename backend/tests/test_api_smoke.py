@@ -77,8 +77,8 @@ async def test_me_and_people_flow(api, db, tenant):
 
 
 async def test_cron_tick_requires_secret(api):
-    res = await api.post("/internal/jobs/tick")
+    res = await api.post("/api/v1/internal/jobs/tick")
     assert res.status_code == 401
-    res = await api.post("/internal/jobs/tick", headers={"X-Cron-Secret": "test-cron-secret"})
+    res = await api.post("/api/v1/internal/jobs/tick", headers={"X-Cron-Secret": "test-cron-secret"})
     assert res.status_code == 200
     assert res.json()["status"] == "ok"
