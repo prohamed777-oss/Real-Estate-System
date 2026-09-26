@@ -25,6 +25,19 @@ CORE_MODEL_MODULES = [
     "app.events.models",
     "app.organizations.models",
     "app.identity.models",
+    "app.leads.models",
+    "app.conversations.models",
+    "app.channels.models",
+    "app.properties.models",
+    "app.listings.models",
+    "app.matching.models",
+    "app.sales.models",
+    "app.finance.models",
+    "app.marketing.models",
+    "app.automation.models",
+    "app.ai.models",
+    "app.analytics.models",
+    "app.importer.models",
 ]
 
 
@@ -35,7 +48,11 @@ async def _schema():
     from app.core.db import Base, engine
 
     for module in CORE_MODEL_MODULES:
-        importlib.import_module(module)
+        try:
+            importlib.import_module(module)
+        except ModuleNotFoundError as exc:
+            if exc.name and exc.name != module and not module.startswith(exc.name):
+                raise
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)

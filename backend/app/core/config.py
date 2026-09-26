@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     # --- Jobs / cron ---
     cron_secret: str = "dev-cron-secret"
 
+    # --- Channels ---
+    meta_webhook_verify_token: str = "dev-verify-token"
+
     # --- AI (Model Gateway) ---
     ai_provider: str = "mock"  # mock | gemini | openai_compatible
     gemini_api_key: str = ""
