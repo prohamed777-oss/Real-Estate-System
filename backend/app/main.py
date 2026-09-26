@@ -121,6 +121,9 @@ def create_app() -> FastAPI:
     app.include_router(ops_router, prefix=settings.api_prefix)
 
     prefix = settings.api_prefix
+    from app.realtime.sse import router as realtime_router
+
+    app.include_router(realtime_router, prefix=prefix)
     app.include_router(auth_router, prefix=prefix)
     app.include_router(org_router, prefix=prefix)
     app.include_router(identity_router, prefix=prefix)
@@ -134,3 +137,6 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
+
+
+# V4 PART 14: real-time subscription gateway (SSE) — inside create_app below

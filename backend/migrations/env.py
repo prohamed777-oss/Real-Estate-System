@@ -31,6 +31,8 @@ for _mod in [
     "app.decision.models",
     "app.capability.models",
     "app.events.history",
+    "app.claims.service",
+    "app.signals.models",
     "app.listings.models",
     "app.matching.models",
     "app.sales.models",
