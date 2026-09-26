@@ -125,8 +125,8 @@ class SimulatorInbound(BaseModel):
 async def simulator_inbound(
     body: SimulatorInbound, session: AsyncSession = Depends(get_session)
 ):
-    if settings.is_production:
-        raise ValidationFailed("Simulator disabled in production")
+    if settings.is_production and not settings.test_mode:
+        raise ValidationFailed("Simulator disabled (enable TEST_MODE for QA environments)")
     from app.organizations.models import Tenant
 
     tenant = (

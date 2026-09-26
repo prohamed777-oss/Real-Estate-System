@@ -110,9 +110,15 @@ async def me(
             await session.execute(select(FeatureFlag).where(FeatureFlag.tenant_id == auth.tenant_id))
         ).scalars()
     }
+    from app.organizations.models import Tenant
+
+    tenant = (
+        await session.execute(select(Tenant).where(Tenant.id == auth.tenant_id))
+    ).scalar_one_or_none()
     return {
         "user": {"id": str(user.id), "email": user.email, "full_name": user.full_name, "locale": user.locale},
         "tenant_id": str(auth.tenant_id),
+        "tenant_slug": tenant.slug if tenant else None,
         "role": role.key if role else auth.role_key,
         "permissions": sorted(auth.permissions),
         "feature_flags": flags,

@@ -30,12 +30,8 @@ export default function SettingsPage() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    api.get<{ user: Record<string, unknown> }>("/auth/me").then(async (me) => {
-      // tenant slug: fetch organizations → tenant slug is on bootstrap; fallback: first org
-      try {
-        const orgs = await api.get<Array<{ id: string; name: string }>>("/org/organizations");
-        if (orgs[0]) setTenantSlug(orgs[0].name);
-      } catch { /* noop */ }
+    api.get<{ user: Record<string, unknown>; tenant_slug?: string }>("/auth/me").then((me) => {
+      if (me.tenant_slug) setTenantSlug(me.tenant_slug);
     }).catch(() => {});
     api.get<Account[]>("/channels/accounts").then(setAccounts).catch(() => setAccounts([]));
     api.get<Membership[]>("/org/users").then(setTeam).catch(() => setTeam(null));

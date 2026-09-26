@@ -16,6 +16,7 @@ class Settings(BaseSettings):
 
     # --- Core ---
     app_env: str = "development"  # development | test | production
+    test_mode: bool = False  # enables WhatsApp simulator on production for QA
     app_name: str = "Real Estate Revenue OS"
     api_prefix: str = "/api/v1"
     cors_origins: list[str] = ["http://localhost:3000"]
