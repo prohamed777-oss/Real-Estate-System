@@ -64,6 +64,7 @@ ROUTER_MODULES = [
     "app.analytics.api",
     "app.analytics.billing_api",
     "app.importer.api",
+    "app.capability.api",
 ]
 
 

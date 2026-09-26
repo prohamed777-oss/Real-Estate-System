@@ -65,6 +65,7 @@ def build_system_context(
     *, profile: AgentProfile, person_context: dict[str, Any] | None,
     recent_messages: list[dict[str, Any]] | None, policies: list[str] | None = None,
     knowledge: list[dict[str, Any]] | None = None,
+    verified_claims: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     """Context Engine (§56): current message + recent conversation + structured
     lead state + relevant facts + KNOWLEDGE (§57) + policies — with a token
@@ -77,6 +78,13 @@ def build_system_context(
         sections.append(
             "KNOWLEDGE (verified internal docs — cite only what is here):\n" + chunks[:3500]
         )
+    if verified_claims:
+        # Trust filter (V4 4.4): only VERIFIED claims reach the model
+        claims_txt = "\n".join(
+            f"- {c['field']} = {c['value']} (source: {c['source']}, confidence: {c['confidence']})"
+            for c in verified_claims
+        )
+        sections.append("VERIFIED FACTS (trust-filtered — cite only these):\n" + claims_txt[:2000])
     if person_context:
         sections.append(
             "CUSTOMER CONTEXT (structured, authoritative):\n"
@@ -133,6 +141,10 @@ async def execute_agent(
     await session.flush()
     exec_id = execution.id
 
+    verified_claims = (
+        await get_verified_claims(session, tenant_id=tenant_id, person_id=person_id)
+        if (tenant_id is not None and person_id is not None) else None
+    )
     messages: list[dict[str, Any]] = build_system_context(
         profile=profile, person_context=None, recent_messages=history,
         policies=list((profile.guardrails or {}).get("policies", [])) or None,
@@ -141,6 +153,7 @@ async def execute_agent(
             if (profile.knowledge_scopes or []) and tenant_id is not None
             else None
         ),
+        verified_claims=verified_claims,
     )
     messages.append({"role": "user", "content": user_message})
 
@@ -259,3 +272,23 @@ async def get_profile(session: AsyncSession, tenant_id: uuid.UUID | None, key: s
     if row is None:
         raise NotFound(f"Agent profile not found: {key}")
     return row
+
+
+async def get_verified_claims(session: AsyncSession, *, tenant_id: uuid.UUID,
+                              person_id: uuid.UUID) -> list[dict[str, Any]]:
+    """Trust filter (V4 4.4): only VERIFIED claims surface to the model."""
+    from sqlalchemy import select
+
+    from app.claims.service import Claim
+
+    rows = (
+        await session.execute(
+            select(Claim).where(
+                Claim.tenant_id == tenant_id,
+                Claim.entity_id == person_id,
+                Claim.truth_status == "CURRENT",
+            )
+        )
+    ).scalars().all()
+    return [{"field": c.field, "value": c.value.get("v"),
+              "source": c.source, "confidence": c.confidence} for c in rows]

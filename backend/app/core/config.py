@@ -41,6 +41,9 @@ class Settings(BaseSettings):
     # --- Encryption at rest for provider credentials ---
     secret_encryption_key: str = ""  # Fernet key or passphrase; empty = derived (dev)
 
+    # --- V4 event transport (optional) ---
+    nats_url: str = ""  # e.g. nats://nats.railway.internal:4222
+
     # --- AI (Model Gateway) ---
     ai_provider: str = "mock"  # mock | gemini | openai_compatible
     gemini_api_key: str = ""

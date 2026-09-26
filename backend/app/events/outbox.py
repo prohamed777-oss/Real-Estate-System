@@ -140,6 +140,13 @@ async def dispatch_batch(session: AsyncSession, *, batch: int = 100) -> dict[str
                 }
                 for handler in handlers:
                     await handler(session, envelope)
+                # optional NATS fan-out (V4 4.3) — never blocks the pipeline
+                try:
+                    from app.events.nats_transport import publish_event
+
+                    await publish_event(row.event_name, row.tenant_id, envelope)
+                except Exception as exc:  # noqa: BLE001
+                    log.warning("NATS publish skipped: %s", exc)
                 row.status = "processed"
                 row.processed_at = datetime.now(UTC)
                 stats["processed"] += 1

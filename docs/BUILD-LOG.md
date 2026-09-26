@@ -95,3 +95,27 @@ matching (3 ranked units + reasons) → reply dispatched via adapter (`sent`) �
 viewing (confirm/attend/complete) → offer 4,050,000 EGP → accepted →
 reservation (idempotent) → contract (inventory CONTRACTED) → deal WON →
 commissions (60,750 agency + 40,500 sales_rep) → funnel 100% conversion.
+
+## V4 Architecture Wave — full implementation ✅
+
+Per the V4 consolidated architecture (Capabilities/Decision Plane/Data Plane):
+
+- **Unified Capability Gateway (PART 10)**: one grant model for ALL external actors
+  (AI_AGENT, OUTBOUND_WEBHOOK, MARKETPLACE_APP, API_CLIENT) with scope + expiry + revocation.
+  Threats closed: SSRF via webhooks (allowlist + DNS-resolve + private-IP/metadata block),
+  marketplace over-scope (install consent → scoped expiring grants), custom-field collision
+  (EAV side tables).
+- **Unified Approval primitive (5.4)**: approval_requests consumed by every domain —
+  role gates, expiry, payload snapshots.
+- **Decision Plane (PART 5)**: policy → scoring → optimization → orchestrator as composable
+  modules + Decision Records (5.3) — every major decision reproducible.
+- **Commission splits DB invariant (1.29)**: SUM=100 trigger + remainder finalize function.
+- **Inventory Ledger (3.4)**: append-only lifecycle history across all transitions.
+- **Claims (4.4-4.5)**: provenance + truth_status lifecycle + bitemporal queries;
+  EXTRACTED/INFERRED born UNVERIFIED — explicit verification gate before CURRENT.
+- **Signal Engine (4.6)**: single definition, online/offline parity validator with drift alerts.
+- **Staleness contracts (4.7)**: projection_registry + lag tracking + degraded mode.
+- **Real-time gateway (PART 14)**: SSE tenant-scoped domain event stream.
+- **NATS transport (4.3)**: optional tenant-scoped fan-out behind the durable pipeline.
+- **AI trust filter (4.4)**: only VERIFIED claims reach the model context.
+- **Tests: 97 green** (11 V4-specific). Tables: 95. RLS: 86 policies.

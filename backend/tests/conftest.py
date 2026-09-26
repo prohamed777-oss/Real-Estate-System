@@ -24,6 +24,8 @@ from sqlalchemy import text
 CORE_MODEL_MODULES = [
     "app.events.models",
     "app.events.history",
+    "app.claims.service",
+    "app.signals.models",
     "app.organizations.models",
     "app.identity.models",
     "app.leads.models",
