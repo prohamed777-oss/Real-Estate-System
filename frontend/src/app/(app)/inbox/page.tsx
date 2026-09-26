@@ -69,7 +69,7 @@ export default function InboxPage() {
 
   async function runJobs() {
     // Dev helper: tick the local worker so queued outbound messages dispatch
-    await fetch("/backend/internal/jobs/tick", { method: "POST", headers: { "X-Cron-Secret": "dev-cron-secret" } }).catch(() => {});
+    await fetch("/backend/api/v1/internal/jobs/tick", { method: "POST", headers: { "X-Cron-Secret": "dev-cron-secret" } }).catch(() => {});
     if (active) loadMessages(active);
     loadConversations();
   }

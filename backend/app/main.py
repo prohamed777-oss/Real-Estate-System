@@ -117,8 +117,8 @@ def create_app() -> FastAPI:
     from app.jobs.api import router as jobs_router
     from app.jobs.ops_api import router as ops_router
 
-    app.include_router(jobs_router)
-    app.include_router(ops_router)
+    app.include_router(jobs_router, prefix=settings.api_prefix)
+    app.include_router(ops_router, prefix=settings.api_prefix)
 
     prefix = settings.api_prefix
     app.include_router(auth_router, prefix=prefix)
