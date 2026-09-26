@@ -125,6 +125,12 @@ async def run_batch(
 
     for job_id in claimed_ids:
         job = (await session.execute(select(Job).where(Job.id == job_id))).scalar_one()
+        # tenant GUC for this unit of work (RLS-ready workers, §82)
+        if job.tenant_id is not None:
+            await session.execute(
+                text("SELECT set_config('app.tenant_id', :tid, false)"),
+                {"tid": str(job.tenant_id)},
+            )
         job.status = "running"
         job.locked_at = datetime.now(UTC)
         job.locked_by = worker

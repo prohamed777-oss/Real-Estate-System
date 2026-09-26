@@ -14,6 +14,7 @@ from app.core.db import get_session
 from app.core.errors import NotFound
 from app.core.permissions import AI_RUN, PROPERTIES_READ, require
 from app.core.tenancy import AuthContext
+from app.events.queue import enqueue
 from app.matching.models import MatchingRun, PropertySearchDocument
 from app.matching.service import embed_lead, run_matching
 from app.properties.service import check_availability
@@ -74,6 +75,32 @@ async def search_properties(
 class MatchIn(BaseModel):
     lead_id: uuid.UUID
     top_n: int = 10
+
+
+@router.post("/sync")
+async def sync_search_documents(
+    auth: AuthContext = Depends(require(AI_RUN)),
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    """Reconciliation tool: rebuild search docs for every active asset (§19)."""
+    from sqlalchemy import select as sel
+
+    from app.matching.service import build_search_document
+    from app.properties.models import PropertyAsset
+
+    assets = (
+        await session.execute(
+            sel(PropertyAsset).where(
+                PropertyAsset.tenant_id == auth.tenant_id, PropertyAsset.is_active.is_(True)
+            )
+        )
+    ).scalars().all()
+    for asset in assets:
+        await build_search_document(session, tenant_id=auth.tenant_id, asset_id=asset.id)
+    await enqueue(
+        session, job_type="matching.embed_documents", tenant_id=auth.tenant_id, payload={},
+    )
+    return {"synced": len(assets)}
 
 
 @router.post("/match")

@@ -102,6 +102,12 @@ async def dispatch_batch(session: AsyncSession, *, batch: int = 100) -> dict[str
 
     for event_id in claimed:
         row = (await session.execute(select(OutboxEvent).where(OutboxEvent.id == event_id))).scalar_one()
+        # tenant GUC for this unit of work (RLS-ready workers, §82)
+        if row.tenant_id is not None:
+            await session.execute(
+                text("SELECT set_config('app.tenant_id', :tid, false)"),
+                {"tid": str(row.tenant_id)},
+            )
         try:
             async with session.begin_nested():
                 if await _already_processed(session, event_id):

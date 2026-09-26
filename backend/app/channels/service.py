@@ -214,7 +214,12 @@ async def dispatch_message(session: AsyncSession, *, tenant_id: uuid.UUID, messa
         )
     ).scalar_one_or_none()
     if account is None:
-        # No connected provider (e.g. simulator not registered) → leave queued
+        # No connected provider yet → self-heal: retry in 30s (bounded by job max_attempts).
+        await enqueue(
+            session, job_type="channel.dispatch_message", tenant_id=tenant_id,
+            payload={"message_id": str(msg.id)}, delay_seconds=30,
+            unique_key=f"msg-{msg.id}",
+        )
         return
 
     identity = (

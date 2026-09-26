@@ -25,6 +25,7 @@ for _mod in [
     "app.identity.models",
     "app.leads.models",
     "app.conversations.models",
+    "app.channels.models",
     "app.properties.models",
     "app.listings.models",
     "app.matching.models",

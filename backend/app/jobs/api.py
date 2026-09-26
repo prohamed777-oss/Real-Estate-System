@@ -30,8 +30,9 @@ async def _tick(session: AsyncSession) -> dict[str, Any]:
     return {"requeued_leases": requeued, "outbox": outbox_stats, "jobs": job_stats}
 
 
-@router.post("/tick")
+@router.api_route("/tick", methods=["GET", "POST"])
 async def tick(x_cron_secret: str = Header(default="")) -> dict[str, Any]:
+    """GET is used by Vercel Cron; POST by local runner and tests."""
     if x_cron_secret != settings.cron_secret:
         raise HTTPException(status_code=401, detail="Invalid cron secret")
     async with session_factory() as session:

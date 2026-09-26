@@ -1,0 +1,25 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "builds": [
+    {
+      "src": "backend/api/index.py",
+      "use": "@vercel/python",
+      "config": { "maxDuration": 60 }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/v1/internal/jobs/tick",
+      "dest": "backend/api/index.py",
+      "headers": { "Cache-Control": "no-store" }
+    },
+    { "src": "/api/(.*)", "dest": "backend/api/index.py" },
+    { "src": "/health", "dest": "backend/api/index.py" },
+    { "src": "/internal/(.*)", "dest": "backend/api/index.py" },
+    { "src": "/api/docs", "dest": "backend/api/index.py" },
+    { "src": "/api/openapi.json", "dest": "backend/api/index.py" }
+  ],
+  "crons": [
+    { "path": "/api/v1/internal/jobs/tick", "schedule": "* * * * *" }
+  ]
+}
