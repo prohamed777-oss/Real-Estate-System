@@ -63,9 +63,9 @@ async def meta_webhook(request: Request, session: AsyncSession = Depends(get_ses
     from app.core.config import settings as cfg
     from app.channels.service import _find_tenant_for_provider_ref
 
-    # Verify signature if any account has app_secret
+    # Signature enforcement is FAIL-CLOSED: a connected Meta account WITHOUT
+    # app_secret rejects webhooks rather than accepting unverified traffic.
     tenant_id = await _find_tenant_for_provider_ref(session, provider="meta_whatsapp", provider_ref=None)
-    verified = False
     if tenant_id:
         account = (
             await session.execute(
@@ -74,11 +74,16 @@ async def meta_webhook(request: Request, session: AsyncSession = Depends(get_ses
                 )
             )
         ).scalar_one_or_none()
-        if account and account.config.get("app_secret"):
-            verified = MetaWhatsAppAdapter.verify_webhook_signature(
+        if account:
+            if not account.config.get("app_secret"):
+                webhook.status = "failed"
+                webhook.error = "account missing app_secret — signature cannot be verified"
+                raise ValidationFailed(
+                    "Meta account configured without app_secret — configure it to receive webhooks"
+                )
+            if not MetaWhatsAppAdapter.verify_webhook_signature(
                 body_bytes, signature or "", account.config["app_secret"]
-            )
-            if not verified:
+            ):
                 webhook.status = "failed"
                 webhook.error = "invalid signature"
                 raise ValidationFailed("Invalid webhook signature")
