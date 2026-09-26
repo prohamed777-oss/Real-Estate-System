@@ -68,12 +68,26 @@ matching (hard filters + semantic) → viewing (conflict-safe) → offer (price
 snapshot, discount approval) → reservation (transactional, idempotent) →
 contract → deal → commissions → revenue analytics → journeys/SLA throughout.
 
+## Production deployment (LIVE)
+
+| Piece | Platform | URL |
+|---|---|---|
+| Frontend (ar RTL/en) | **Vercel** | revenue-os-web-eight.vercel.app |
+| Backend API | **Railway** (uvicorn) | real-estate-system-production-a500.up.railway.app |
+| Background worker (5s loop) | **Railway** — same container (`start.sh` supervises both) | — |
+| Database / Auth / Storage | **Supabase** Postgres + Auth (pooler, transaction-safe) | eu-central-1 |
+
+- Railway auto-deploys from `main` (GitHub integration)
+- Frontend proxies `/backend/*` to the Railway API (`BACKEND_URL` env)
+- TEST_MODE=true enables the WhatsApp simulator for QA — set false when wiring real Meta credentials
+- Ops endpoints (`/ops/dlq`, `/ops/retention`) are secret-guarded
+
 ## Integrations (wired, awaiting credentials)
 | Integration | Status | Wire-up |
 |---|---|---|
 | Meta WhatsApp Cloud API | adapter complete | Settings → قنوات التواصل → paste token + phone_number_id |
-| Supabase Auth | code complete | set SUPABASE_URL/JWT_SECRET; frontend uses @supabase/ssr |
-| Vercel deploy | configs ready | backend: root deploy (vercel.json) · frontend: root=frontend |
+| Supabase Auth | **live in production** (JWKS verified) | — |
+| Railway deploys | **live** — auto-deploy from main | push to main = redeploy |
 | Voice AI | stubbed (§115 defers voice) | voice adapter interface ready in AI platform |
 
 ## Tests
