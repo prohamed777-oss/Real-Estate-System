@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
@@ -27,7 +27,13 @@ from app.core.permissions import (
     require,
 )
 from app.core.tenancy import AuthContext
-from app.sales.models import Offer, NegotiationEntry, Opportunity, Reservation, Viewing, ViewingEvent
+from app.sales.models import (
+    NegotiationEntry,
+    Offer,
+    Opportunity,
+    Reservation,
+    Viewing,
+)
 from app.sales.service import (
     create_offer,
     create_opportunity,
@@ -38,7 +44,7 @@ from app.sales.service import (
     transition_reservation,
     transition_viewing,
 )
-from app.sales.statemachine import OpportunityStateMachine, ViewingStateMachine
+from app.sales.statemachine import OpportunityStateMachine
 
 router = APIRouter(tags=["sales"])
 

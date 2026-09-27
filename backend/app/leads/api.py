@@ -11,7 +11,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_session
-from app.core.errors import NotFound, ValidationFailed
+from app.core.errors import ValidationFailed
 from app.core.pagination import CursorPage, encode_cursor
 from app.core.permissions import LEADS_READ, LEADS_WRITE, require
 from app.core.tenancy import AuthContext
@@ -124,7 +124,6 @@ async def create(
     if body.person_id:
         person_id = body.person_id
     elif body.full_name or body.phone or body.email:
-        from app.identity.models import Person as P
         from app.organizations.provisioning import get_or_create_person
 
         person = await get_or_create_person(

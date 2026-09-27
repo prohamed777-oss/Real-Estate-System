@@ -14,8 +14,8 @@ import json
 import logging
 import time
 import uuid
-from datetime import UTC, datetime
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import select
@@ -23,7 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.gateway import ModelResponse, get_model_provider
 from app.ai.guardrails import check_output
-from app.ai.models import AIExecution, AgentProfile
+from app.ai.models import AgentProfile, AIExecution
 from app.ai.tools import execute_tool, tools_for_scopes
 from app.core.errors import DomainError, NotFound
 

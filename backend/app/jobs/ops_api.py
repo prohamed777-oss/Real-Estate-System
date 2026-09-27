@@ -5,17 +5,16 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException, UploadFile
-from sqlalchemy import select, text, update
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.db import get_session, session_factory
+from app.core.db import get_session
 from app.core.errors import NotFound
-from app.core.permissions import SETTINGS_READ, SETTINGS_WRITE, require
+from app.core.permissions import SETTINGS_WRITE, require
 from app.core.tenancy import AuthContext
 from app.events.models import Job, OutboxEvent
 

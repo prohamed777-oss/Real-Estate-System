@@ -8,7 +8,6 @@ from decimal import Decimal
 from typing import Any
 
 from sqlalchemy import (
-    text as sa_text,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -17,6 +16,9 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+)
+from sqlalchemy import (
+    text as sa_text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column

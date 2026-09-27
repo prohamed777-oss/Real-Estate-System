@@ -17,11 +17,9 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, String
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, select
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
-
-from sqlalchemy import select
 
 from app.core.db import Base, UUIDPk
 from app.core.errors import NotFound, ValidationFailed

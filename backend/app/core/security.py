@@ -54,7 +54,7 @@ def decode_token(token: str) -> dict[str, Any]:
     )
 
 
-async def resolve_user_context(claims: dict[str, Any]) -> "tenancy.AuthContext":
+async def resolve_user_context(claims: dict[str, Any]) -> tenancy.AuthContext:
     """Load the user's membership and role permissions from the DB.
 
     The token proves identity; the database defines what that identity may do.

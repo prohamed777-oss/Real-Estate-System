@@ -13,13 +13,9 @@ from sqlalchemy import func, select
 
 from app.core.db import session_factory
 from app.core.errors import Conflict
-from app.listings.models import Listing
 from app.properties.models import (
-    Building,
     InventoryHold,
     PriceVersion,
-    Project,
-    PropertyAsset,
     UnitInventory,
 )
 from app.properties.service import (

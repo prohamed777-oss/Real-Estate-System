@@ -50,9 +50,9 @@ async def meta_webhook(request: Request, session: AsyncSession = Depends(get_ses
     parse → phone_number_id → EXACT ChannelAccount (decrypted) → tenant
     → signature verification (fail-closed) → persist raw → dedup → async.
     """
+
     from app.channels.meta_whatsapp import MetaWhatsAppAdapter
     from app.core.crypto import decrypt_config
-    from datetime import UTC, datetime
 
     body_bytes = await request.body()
     payload = await request.json()
@@ -295,7 +295,7 @@ async def post_template(
     auth: AuthContext = Depends(require(SETTINGS_WRITE)),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
-    from app.channels.templates import create_template, extract_variables
+    from app.channels.templates import create_template
 
     template = await create_template(
         session, tenant_id=auth.tenant_id, name=body.name, body=body.body,

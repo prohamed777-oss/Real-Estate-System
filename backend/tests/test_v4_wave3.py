@@ -5,9 +5,7 @@ from __future__ import annotations
 import uuid
 
 from app.capability.gateway import (
-    GranteeType,
     derive_idempotency_key,
-    issue_grant,
 )
 from app.events.nats_transport import subject_for
 from app.identity.models import Person
@@ -71,10 +69,9 @@ async def test_custom_fields_api_flow(api, db, tenant, owner_ctx):
 
 async def test_ai_context_includes_only_verified_claims(db, tenant, owner_ctx):
     """V4 4.4 trust filter: UNVERIFIED claims never reach the model context."""
-    from datetime import UTC, datetime
 
-    from app.claims.service import assert_claim, verify_claim
     from app.ai.runtime import get_verified_claims
+    from app.claims.service import assert_claim, verify_claim
 
     async with db.begin():
         person = Person(tenant_id=tenant.id, full_name="عميل كليمز", phone="+201333333333")

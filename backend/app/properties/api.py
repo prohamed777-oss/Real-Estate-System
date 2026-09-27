@@ -7,20 +7,23 @@ from decimal import Decimal
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_session
 from app.core.errors import NotFound
 from app.core.pagination import CursorPage, encode_cursor
-from app.core.permissions import INVENTORY_READ, INVENTORY_WRITE, PROPERTIES_READ, PROPERTIES_WRITE, require
+from app.core.permissions import (
+    INVENTORY_READ,
+    INVENTORY_WRITE,
+    PROPERTIES_READ,
+    PROPERTIES_WRITE,
+    require,
+)
 from app.core.tenancy import AuthContext
 from app.properties.models import (
-    Building,
-    InventoryHold,
     PriceVersion,
-    Project,
     PropertyAsset,
     UnitInventory,
 )
@@ -37,7 +40,6 @@ from app.properties.service import (
     hold_unit,
     release_unit,
     set_price,
-    transition_listing,
 )
 
 router = APIRouter(tags=["properties"])
@@ -317,7 +319,6 @@ async def post_hold(
     auth: AuthContext = Depends(require(INVENTORY_WRITE)),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
-    from datetime import UTC, datetime
 
     hold = await hold_unit(
         session, tenant_id=auth.tenant_id, asset_id=asset_id,

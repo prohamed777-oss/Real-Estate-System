@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
-import pytest
 from sqlalchemy import func, select, update
 
 from app.core.db import session_factory

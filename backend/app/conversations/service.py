@@ -4,16 +4,14 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
-from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.audit import audit
+from app.conversations.models import Conversation, ConversationAssignment, Message
 from app.core.errors import NotFound
 from app.events.outbox import emit
 from app.identity.models import Identity, Person
-from app.conversations.models import Conversation, ConversationAssignment, Message, Task
 
 
 async def resolve_inbound_identity(

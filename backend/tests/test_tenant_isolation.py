@@ -3,7 +3,6 @@ RLS (defense in depth) is verified separately against migrated databases."""
 
 from __future__ import annotations
 
-import pytest
 from sqlalchemy import select
 
 from app.core import tenancy

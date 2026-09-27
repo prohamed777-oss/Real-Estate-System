@@ -4,15 +4,12 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime, timedelta
-from decimal import Decimal
 
 import pytest
-from sqlalchemy import text
 
 from app.ai.gateway import ModelResponse
-from app.capability.gateway import CapabilityDenied
-from app.core.errors import Conflict, PermissionDenied, ValidationFailed
 from app.core.db import session_factory
+from app.core.errors import Conflict, PermissionDenied
 from app.finance.service import close_deal
 from app.identity.models import Person
 from app.leads.service import create_lead
@@ -23,7 +20,6 @@ from app.properties.service import (
     hold_unit,
 )
 from app.sales.service import (
-    create_offer,
     create_opportunity,
 )
 
@@ -44,9 +40,10 @@ async def test_bootstrap_rejects_existing_slug(api, tenant, owner_ctx):
 async def test_provision_rejects_owner_grab_on_existing_slug(db, tenant, owner_ctx):
     """Even at the service layer, an existing tenant must never gain a new owner
     through provision_tenant with a different email."""
-    from app.organizations.provisioning import provision_tenant
-    from app.organizations.models import Membership
     from sqlalchemy import func
+
+    from app.organizations.models import Membership
+    from app.organizations.provisioning import provision_tenant
 
     async with session_factory() as s:
         before = (
@@ -86,10 +83,10 @@ async def test_approval_args_hash_binding(db, tenant, owner_ctx):
     """The approval binds to the EXACT args — different args = denied.
     create_reservation is CLASS_APPROVAL: it passes ONLY with a bound,
     APPROVED request whose args-hash matches the executed arguments."""
+    from app.ai.tools import execute_tool
+    from app.capability.gateway import derive_idempotency_key
     from app.decision.models import ApprovalRequest
     from app.decision.services import request_approval
-    from app.capability.gateway import derive_idempotency_key
-    from app.ai.tools import execute_tool
 
     args = {"opportunity_id": str(uuid.uuid4()), "offer_id": str(uuid.uuid4())}
     async with db.begin():
@@ -129,9 +126,8 @@ async def test_approval_args_hash_binding(db, tenant, owner_ctx):
 
 # ---------- P0-3: permissions INTERSECTION ----------
 async def test_agent_permissions_intersect_never_union(db, tenant, owner_ctx):
-    from app.ai.runtime import execute_agent
     from app.ai.gateway import MockModelProvider, ModelResponse, set_model_provider
-    from app.ai.runtime import get_profile
+    from app.ai.runtime import execute_agent, get_profile
 
     mock = MockModelProvider()
     mock.script_response(
@@ -163,7 +159,6 @@ async def test_agent_permissions_intersect_never_union(db, tenant, owner_ctx):
 
 # ---------- P0-5: webhook exact routing + fail-closed ----------
 async def test_meta_webhook_fail_closed_without_secret(db, tenant, owner_ctx, api):
-    from app.channels.models import ChannelAccount
     from app.channels.service import connect_channel_account
 
     async with db.begin():
@@ -206,9 +201,7 @@ async def test_price_concurrency_db_guard(db, tenant, owner_ctx):
 
 async def test_viewing_overlap_db_guard(db, tenant, owner_ctx):
     """Two overlapping CONFIRMED viewings for one salesperson: impossible in DB."""
-    from datetime import UTC, datetime, timedelta
 
-    from app.sales.models import Viewing
     from app.sales.service import create_viewing
 
     async with db.begin():
@@ -243,7 +236,6 @@ async def test_viewing_overlap_db_guard(db, tenant, owner_ctx):
 
 # ---------- P1: hold expiry reconciles read AND write truth ----------
 async def test_expired_hold_reconciles_state(db, tenant, owner_ctx):
-    from datetime import UTC, datetime, timedelta
 
     from app.properties.models import InventoryHold, UnitInventory
 
@@ -277,10 +269,9 @@ async def test_expired_hold_reconciles_state(db, tenant, owner_ctx):
 
 # ---------- P1: deal state machine ----------
 async def test_deal_state_machine_enforced(db, tenant, owner_ctx):
+    from app.finance.service import create_deal
     from app.leads.service import create_lead
     from app.sales.service import create_opportunity
-    from app.finance.service import create_deal, close_deal
-    from app.core.errors import Conflict
 
     async with db.begin():
         person = Person(tenant_id=tenant.id, full_name="D", phone="+201555000888")
@@ -358,6 +349,6 @@ async def test_budget_pre_check_stops_before_provider(db, tenant, owner_ctx):
 
 
 from sqlalchemy import select  # noqa: E402
-from app.properties.service import set_price, release_unit  # noqa: E402
+
 from app.decision.models import InventoryLedger  # noqa: E402
-from app.core.errors import Conflict  # noqa: E402
+from app.properties.service import release_unit, set_price  # noqa: E402

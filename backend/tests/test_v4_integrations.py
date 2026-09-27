@@ -3,16 +3,12 @@
 from __future__ import annotations
 
 import uuid
-from decimal import Decimal
 
-import pytest
 from sqlalchemy import select, text
 
-from app.claims.service import Claim, assert_claim
+from app.claims.service import Claim
 from app.core.db import session_factory
-from app.decision.models import CommissionSplit, Decision
 from app.identity.models import Person
-from app.leads.models import Lead
 from app.leads.service import create_lead
 from app.properties.service import create_asset, create_project, set_price
 
@@ -104,9 +100,8 @@ async def test_lead_routing_decision_record(db, tenant, owner_ctx):
     """V4 5.5: lead creation triggers Decision Plane routing."""
     from app.decision.models import Decision as DecisionRow
     from app.finance.service import write_commission_splits  # noqa: F401
-    from app.organizations.models import Membership, Organization, Role, User
-    from app.leads.service import create_lead
     from app.identity.models import Person
+    from app.organizations.models import Membership, Organization, Role, User
 
     async with db.begin():
         # setup: org, sales rep, person, lead
@@ -181,5 +176,5 @@ async def test_commission_splits_remainder_function(db, tenant, owner_ctx):
     assert float(total) == 100.00
 
 
+
 from app.finance.service import write_commission_splits  # noqa: E402
-from unittest.mock import patch as mock_patch  # noqa: E402

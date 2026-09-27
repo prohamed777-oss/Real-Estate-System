@@ -60,9 +60,10 @@ async def on_deal_created(session, envelope):  # noqa: ANN001
 @event_handler("payment.scheduled")
 async def on_payment_scheduled(session, envelope):  # noqa: ANN001
     """Payment scheduled → create a follow-up task before the due date."""
+    from datetime import UTC, datetime, timedelta
+
     from app.automation.service import apply_rules_for_event
     from app.conversations.models import Task
-    from datetime import UTC, datetime, timedelta
 
     tenant_id = _tid(envelope)
     if tenant_id is None:

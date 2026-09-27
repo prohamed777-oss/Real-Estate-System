@@ -124,9 +124,9 @@ def create_app() -> FastAPI:
     app.include_router(ops_router, prefix=settings.api_prefix)
 
     prefix = settings.api_prefix
-    from app.realtime.sse import router as realtime_router
-    from app.identity.gdpr import router as gdpr_router
     from app.channels.webchat import router as webchat_router
+    from app.identity.gdpr import router as gdpr_router
+    from app.realtime.sse import router as realtime_router
 
     app.include_router(realtime_router, prefix=prefix)
     app.include_router(gdpr_router, prefix=prefix)

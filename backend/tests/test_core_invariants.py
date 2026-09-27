@@ -7,7 +7,7 @@ import pytest
 from app.core.errors import Conflict, IdempotencyConflict, PermissionDenied
 from app.core.idempotency import IdempotencyGuard, payload_hash
 from app.core.money import Money
-from app.core.permissions import SYSTEM_ROLES, SETTINGS_WRITE, require
+from app.core.permissions import SETTINGS_WRITE, SYSTEM_ROLES
 from app.core.statemachine import StateMachine
 
 

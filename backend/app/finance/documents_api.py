@@ -11,7 +11,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_session
-from app.core.errors import NotFound
 from app.core.permissions import CONTRACTS_READ, CONTRACTS_WRITE, require
 from app.core.tenancy import AuthContext
 from app.finance.documents_service import (
@@ -23,7 +22,7 @@ from app.finance.documents_service import (
     sign,
 )
 from app.finance.models import Document
-from app.properties.models_ext import DocumentApproval, DocumentSignature, DocumentVersion
+from app.properties.models_ext import DocumentSignature, DocumentVersion
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 

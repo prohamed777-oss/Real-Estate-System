@@ -6,7 +6,6 @@ the DB window). Redis swap later behind the same interface.
 
 from __future__ import annotations
 
-import uuid
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import text

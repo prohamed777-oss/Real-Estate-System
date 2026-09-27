@@ -12,17 +12,15 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
-from typing import Any
 
-from sqlalchemy import select, text
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
 
 from app.core.audit import audit
 from app.core.errors import Conflict, NotFound, ValidationFailed
+from app.decision.models import InventoryLedger
 from app.events.outbox import emit
 from app.listings.models import Listing
-from app.decision.models import InventoryLedger
 from app.properties.models import (
     Building,
     Developer,
@@ -32,7 +30,6 @@ from app.properties.models import (
     PriceVersion,
     Project,
     PropertyAsset,
-    SupplySource,
     UnitInventory,
 )
 from app.properties.statemachine import INVENTORY_EVENTS, InventoryStateMachine, ListingStateMachine

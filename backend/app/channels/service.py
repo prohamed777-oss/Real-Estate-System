@@ -27,11 +27,10 @@ from app.conversations.service import (
 )
 from app.core.audit import audit
 from app.core.errors import NotFound, ValidationFailed
-from app.events.queue import enqueue
 from app.events.outbox import emit
-from app.identity.models import CommunicationConsent, Identity, Person
+from app.events.queue import enqueue
+from app.identity.models import CommunicationConsent, Identity
 from app.leads.service import create_lead
-from app.organizations.models import Tenant
 
 
 async def persist_webhook(

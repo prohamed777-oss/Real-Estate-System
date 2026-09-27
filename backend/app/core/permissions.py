@@ -10,7 +10,6 @@ from __future__ import annotations
 from fastapi import Depends
 
 from app.core import tenancy
-from app.core.errors import PermissionDenied
 from app.core.security import get_auth
 
 # --- Canonical permission strings ---

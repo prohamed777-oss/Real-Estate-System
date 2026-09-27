@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import uuid
 from typing import Any
 
 from fastapi import APIRouter, Depends
@@ -19,7 +18,6 @@ from app.automation.models import (
     SLATracker,
 )
 from app.core.db import get_session
-from app.core.errors import NotFound
 from app.core.permissions import AUTOMATION_READ, AUTOMATION_WRITE, require
 from app.core.tenancy import AuthContext
 

@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import ValidationFailed
 from app.identity.models import Person
-from app.importer.models import ImportJob, ImportError_
+from app.importer.models import ImportError_, ImportJob
 from app.properties.service import create_asset, create_project
 
 PROPERTY_FIELDS = {

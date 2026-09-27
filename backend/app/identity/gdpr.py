@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import uuid
 from datetime import UTC, datetime
 from typing import Any
@@ -12,14 +11,14 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.conversations.models import Conversation, Message
 from app.core.audit import audit
 from app.core.db import get_session
-from app.core.errors import NotFound, PermissionDenied
+from app.core.errors import NotFound
 from app.core.permissions import require
 from app.core.tenancy import AuthContext
-from app.identity.models import CommunicationConsent, CustomerProfile, Identity, Person
+from app.identity.models import CommunicationConsent, Identity, Person
 from app.leads.models import Lead
-from app.conversations.models import Conversation, Message
 
 router = APIRouter(prefix="/gdpr", tags=["gdpr"])
 
@@ -31,8 +30,6 @@ async def export_person_data(
     session: AsyncSession = Depends(get_session),
 ) -> JSONResponse:
     """Article 20: Right to data portability. Exports ALL data for one person."""
-    from app.sales.models import Opportunity, Viewing, Offer, Reservation
-    from app.finance.models import Deal, Payment
 
     person = (
         await session.execute(

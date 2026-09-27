@@ -11,7 +11,6 @@ NEVER used for price/availability/permissions (§24).
 from __future__ import annotations
 
 import math
-import uuid
 from typing import Any
 
 ENGINE_VERSION = "v1"

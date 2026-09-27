@@ -8,13 +8,12 @@ Adding a provider = adding an adapter class + registration. Nothing else changes
 from __future__ import annotations
 
 import hashlib
-import hmac
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any
 
-from app.core.errors import DomainError, ExternalProviderError
+from app.core.errors import DomainError
 
 SUPPORTED_CHANNELS = {"whatsapp", "instagram", "messenger", "email", "sms", "webchat", "voice"}
 

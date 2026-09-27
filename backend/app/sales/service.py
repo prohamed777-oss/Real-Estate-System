@@ -16,10 +16,10 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.audit import audit
-from app.core.errors import Conflict, IdempotencyConflict, NotFound, ValidationFailed
+from app.core.errors import Conflict, NotFound, ValidationFailed
 from app.events.outbox import emit
 from app.leads.models import Lead
-from app.properties.models import PropertyAsset, UnitInventory
+from app.properties.models import PropertyAsset
 from app.properties.service import mark_reserved
 from app.sales.models import (
     NegotiationEntry,

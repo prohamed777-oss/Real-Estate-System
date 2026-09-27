@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.ai.models import AIExecution, AgentProfile
+from app.ai.models import AgentProfile, AIExecution
 from app.ai.runtime import execute_agent, get_profile
 from app.core.db import get_session
 from app.core.errors import NotFound

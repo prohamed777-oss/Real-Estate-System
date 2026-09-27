@@ -5,16 +5,15 @@ derived idempotency (1.28), durable event history (4.1)."""
 from __future__ import annotations
 
 import uuid
-from decimal import Decimal
 
 import pytest
-from sqlalchemy import func, select
+from sqlalchemy import select
 
 from app.capability.custom_fields import define_field, get_values, set_value
 from app.capability.gateway import (
     CapabilityDenied,
-    GrantExpired,
     GranteeType,
+    GrantExpired,
     WebhookURLRejected,
     assert_outbound_url_allowed,
     check_capability,
@@ -26,7 +25,6 @@ from app.capability.gateway import (
     validate_webhook_url,
     verify_webhook_destination,
 )
-from app.core.db import session_factory
 from app.core.errors import Conflict, ValidationFailed
 from app.decision.models import ApprovalRequest, Decision, InventoryLedger
 from app.decision.services import (
@@ -37,7 +35,6 @@ from app.decision.services import (
 from app.finance.service import write_commission_splits
 from app.identity.models import Person
 from app.leads.service import create_lead
-from app.properties.models import PropertyAsset
 from app.properties.service import create_asset, create_project
 
 
@@ -74,7 +71,6 @@ async def test_capability_grant_lifecycle(db, tenant):
 
 
 async def test_capability_expiry_and_revocation(db, tenant):
-    from datetime import UTC, datetime, timedelta
 
     async with db.begin():
         await issue_grant(db, tenant_id=tenant.id, grantee_type=GranteeType.API_CLIENT,
@@ -208,7 +204,6 @@ async def test_approval_primitive_role_gate_and_expiry(db, tenant, owner_ctx):
         )
         assert decided.status == "APPROVED"
     async with db.begin():
-        from datetime import UTC, datetime, timedelta
 
         req2 = await request_approval(
             db, tenant_id=tenant.id, subject_type="offer_discount",
@@ -226,7 +221,6 @@ async def test_approval_primitive_role_gate_and_expiry(db, tenant, owner_ctx):
 
 # ---------- Commission splits DB invariant (V4 1.29) ----------
 async def test_commission_splits_db_invariant(db, tenant, owner_ctx):
-    from app.finance.service import create_deal
     from app.sales.service import create_opportunity
 
     async with db.begin():
@@ -253,7 +247,6 @@ async def test_commission_splits_db_invariant(db, tenant, owner_ctx):
         assert "must be exactly 100.00" in str(exc.value)
     # remainder finalize
     async with db.begin():
-        from app.decision.models import CommissionSplit
 
         await write_commission_splits(db, tenant_id=tenant.id, deal_id=deal_id, splits=[
             {"party_role": "agency", "share_percentage": 60},
@@ -277,14 +270,17 @@ async def test_inventory_ledger_appends_every_transition(db, tenant, owner_ctx):
                                    project_id=project.id)
         asset_id = asset.id
         from app.properties.service import (
-            hold_unit, mark_reserved, mark_contracted, mark_sold, release_unit,
+            hold_unit,
+            mark_contracted,
+            mark_reserved,
+            mark_sold,
+            release_unit,
         )
 
         await hold_unit(db, tenant_id=tenant.id, asset_id=asset_id, created_by="t")
         await release_unit(db, tenant_id=tenant.id, asset_id=asset_id)
         await hold_unit(db, tenant_id=tenant.id, asset_id=asset_id, created_by="t")
         reservation_marker = uuid.uuid4()
-        from app.properties.service import mark_reserved
 
         await mark_reserved(db, tenant_id=tenant.id, asset_id=asset_id,
                             reservation_id=reservation_marker)

@@ -8,16 +8,16 @@ STRUCTURED query plan; the data service executes it; the LLM only explains.
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import func, select, text
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.conversations.models import Conversation, Message, Task
-from app.finance.models import Commission, Deal, Payment
+from app.finance.models import Commission, Deal
 from app.leads.models import Lead, LeadRequirement
-from app.properties.models import PropertyAsset, UnitInventory
+from app.properties.models import UnitInventory
 from app.sales.models import Offer, Opportunity, Reservation, Viewing
 
 

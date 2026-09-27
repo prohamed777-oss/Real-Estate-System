@@ -16,7 +16,6 @@ privileged roles, or adds a WHERE clause for scoped roles.
 from __future__ import annotations
 
 from sqlalchemy import Select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.tenancy import AuthContext
 

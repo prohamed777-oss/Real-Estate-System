@@ -9,10 +9,10 @@ from datetime import UTC, datetime
 import pytest
 from sqlalchemy import func, select
 
-from app.ai.gateway import ModelResponse, MockModelProvider, set_model_provider
+from app.ai.gateway import MockModelProvider, ModelResponse, set_model_provider
 from app.analytics.billing import PLAN_LIMITS, QuotaExceeded, check_quota, record_usage
 from app.core.db import session_factory
-from app.core.errors import Conflict, DomainError, ValidationFailed
+from app.core.errors import Conflict
 from app.core.ratelimit import RateLimitExceeded, check_rate_limit
 from app.finance.documents_service import (
     add_signature,
@@ -24,7 +24,6 @@ from app.finance.documents_service import (
 )
 from app.identity.models import Person
 from app.leads.service import create_lead
-from app.marketing.models_ext import MarketingAsset
 from app.marketing.service import (
     capture_attribution,
     generate_content,

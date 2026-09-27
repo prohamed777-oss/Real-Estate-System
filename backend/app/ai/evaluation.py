@@ -13,7 +13,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.ai.models import AIExecution, EvalRun
+from app.ai.models import EvalRun
 from app.ai.runtime import execute_agent, get_profile
 
 

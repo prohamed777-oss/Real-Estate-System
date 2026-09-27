@@ -12,7 +12,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_session
-from app.core.errors import NotFound
 from app.core.permissions import INVENTORY_READ, INVENTORY_WRITE, PROPERTIES_WRITE, require
 from app.core.tenancy import AuthContext
 from app.properties.models_ext import InventoryConflict

@@ -11,7 +11,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.embeddings import get_embedding_provider
 from app.core.errors import NotFound
-from app.events.queue import enqueue
 from app.events.outbox import emit
 from app.leads.models import Lead, LeadRequirement
 from app.matching.engine import ENGINE_VERSION, rank_candidates

@@ -13,7 +13,6 @@ from __future__ import annotations
 import asyncio
 import json
 import uuid
-from datetime import UTC, datetime
 
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
@@ -21,7 +20,6 @@ from sqlalchemy import select
 
 from app.core.db import session_factory
 from app.core.security import decode_token
-from app.core.tenancy import AuthContext
 from app.events.history import DomainEventHistory
 
 router = APIRouter(prefix="/realtime", tags=["realtime"])

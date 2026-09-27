@@ -5,7 +5,7 @@ Money is never a bare float. DB columns are NUMERIC(18,4) + ISO-4217 currency.
 
 from __future__ import annotations
 
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
 from pydantic import GetCoreSchemaHandler
@@ -29,19 +29,19 @@ class Money:
         self.amount = amt
         self.currency = cur
 
-    def add(self, other: "Money") -> "Money":
+    def add(self, other: Money) -> Money:
         self._assertSameCurrency(other)
         return Money(self.amount + other.amount, self.currency)
 
-    def sub(self, other: "Money") -> "Money":
+    def sub(self, other: Money) -> Money:
         self._assertSameCurrency(other)
         return Money(self.amount - other.amount, self.currency)
 
-    def mul(self, factor: Decimal | str | int | float) -> "Money":
+    def mul(self, factor: Decimal | str | int | float) -> Money:
         f = Decimal(str(factor))
         return Money(self.amount * f, self.currency)
 
-    def pct(self, percentage: Decimal | str | int | float) -> "Money":
+    def pct(self, percentage: Decimal | str | int | float) -> Money:
         return self.mul(Decimal(str(percentage)) / Decimal(100))
 
     def is_zero(self) -> bool:
@@ -50,7 +50,7 @@ class Money:
     def is_negative(self) -> bool:
         return self.amount < 0
 
-    def _assertSameCurrency(self, other: "Money") -> None:
+    def _assertSameCurrency(self, other: Money) -> None:
         if self.currency != other.currency:
             raise ValueError(f"Currency mismatch: {self.currency} vs {other.currency}")
 
@@ -68,7 +68,7 @@ class Money:
         return {"amount": str(self.amount), "currency": self.currency}
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "Money":
+    def from_dict(cls, data: dict[str, Any]) -> Money:
         return cls(data["amount"], data.get("currency", "EGP"))
 
     # --- pydantic integration ---
@@ -80,7 +80,7 @@ class Money:
         )
 
     @classmethod
-    def _validate(cls, value: Any) -> "Money":
+    def _validate(cls, value: Any) -> Money:
         if isinstance(value, Money):
             return value
         if isinstance(value, dict):

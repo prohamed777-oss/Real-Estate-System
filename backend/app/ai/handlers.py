@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import uuid
-
-from app.events.registry import event_handler, job_handler
+from app.events.registry import job_handler
 
 
 @job_handler("ai.embed_knowledge")

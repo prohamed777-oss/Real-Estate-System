@@ -8,19 +8,18 @@ import uuid
 import pytest
 from sqlalchemy import select
 
-from app.channels.gateway import SimulatorAdapter, get_adapter
+from app.channels.gateway import InboundMessage
 from app.channels.models import ChannelAccount
 from app.channels.service import (
     persist_webhook,
     process_inbound_message,
     send_outbound_message,
 )
-from app.channels.gateway import InboundMessage
 from app.conversations.models import Conversation, Message, Task
+from app.core.db import session_factory
 from app.core.errors import Conflict, ValidationFailed
 from app.events.queue import run_batch
-from app.core.db import session_factory
-from app.identity.models import Identity, Person
+from app.identity.models import Person
 from app.leads.models import Lead
 from app.leads.service import recompute_scores, transition_lead
 

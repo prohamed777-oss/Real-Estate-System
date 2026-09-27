@@ -5,9 +5,7 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from datetime import UTC, datetime, timedelta
-
-import pytest
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 
@@ -19,7 +17,6 @@ from app.claims.service import (
     verify_claim,
 )
 from app.core.db import session_factory
-from app.core.errors import ValidationFailed
 from app.signals.service import (
     define_signal,
     validate_parity,
@@ -49,7 +46,6 @@ async def test_claims_provenance_and_verification_gate(db, tenant):
 
 
 async def test_claims_supersede_and_bitemporal_queries(db, tenant):
-    from app.claims.service import Claim
 
     eid = uuid.uuid4()
     async with db.begin():

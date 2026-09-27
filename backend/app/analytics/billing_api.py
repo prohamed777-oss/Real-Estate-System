@@ -5,16 +5,15 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, Depends
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.analytics.billing import usage_summary
+from app.analytics.models import Subscription
 from app.core.db import get_session
 from app.core.errors import NotFound
 from app.core.permissions import SETTINGS_READ, SETTINGS_WRITE, require
 from app.core.tenancy import AuthContext
-from sqlalchemy import select
-
-from app.analytics.models import Subscription
 
 router = APIRouter(prefix="/billing", tags=["billing"])
 

@@ -5,7 +5,6 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
-from zoneinfo import ZoneInfo
 
 import pytest
 from sqlalchemy import func, select
@@ -14,12 +13,10 @@ from app.core.db import session_factory
 from app.core.errors import Conflict, ValidationFailed
 from app.identity.models import Person
 from app.leads.models import Lead, LeadRequirement
-from app.listings.models import Listing
-from app.matching.models import MatchingRun, PropertySearchDocument
 from app.matching.service import build_search_document, embed_lead, run_matching
-from app.properties.models import PropertyAsset, UnitInventory
+from app.properties.models import UnitInventory
 from app.properties.service import create_asset, create_project, set_price
-from app.sales.models import Offer, Opportunity, Reservation
+from app.sales.models import Reservation
 from app.sales.service import (
     create_offer,
     create_opportunity,

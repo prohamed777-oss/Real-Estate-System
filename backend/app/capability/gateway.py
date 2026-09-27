@@ -49,7 +49,7 @@ async def issue_grant(
     session: AsyncSession, *, tenant_id: uuid.UUID, grantee_type: GranteeType,
     grantee_id: str, resource_scope: str, action_scope: str,
     ttl_days: int = 90, issued_by: str | None = None,
-) -> "CapabilityGrant":
+) -> CapabilityGrant:
     """Issue a capability grant. Grants ALWAYS expire (no eternal trust)."""
     grant = CapabilityGrant(
         tenant_id=tenant_id,
@@ -68,7 +68,7 @@ async def issue_grant(
 async def check_capability(
     session: AsyncSession, *, tenant_id: uuid.UUID, grantee_type: GranteeType,
     grantee_id: str, resource_scope: str, action_scope: str,
-) -> "CapabilityGrant":
+) -> CapabilityGrant:
     """THE gate. Every external action passes here. Raises CapabilityDenied."""
     now = datetime.now(UTC)
     grants = (
@@ -165,7 +165,7 @@ def validate_webhook_url(url: str) -> str:
 async def register_webhook_destination(
     session: AsyncSession, *, tenant_id: uuid.UUID, url: str,
     owner_user_id: uuid.UUID | None = None,
-) -> tuple["WebhookDestination", str]:
+) -> tuple[WebhookDestination, str]:
     """Register → PENDING_VERIFICATION with a challenge token.
     The URL becomes VERIFIED only after the challenge is answered."""
     host = validate_webhook_url(url)  # permanent block, even before verification

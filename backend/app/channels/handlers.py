@@ -7,10 +7,9 @@ import uuid
 
 from sqlalchemy import select
 
+from app.channels.gateway import InboundMessage
 from app.channels.service import dispatch_message
 from app.conversations.service import record_inbound_message
-from app.channels.gateway import InboundMessage
-from app.core.db import session_factory
 from app.events.queue import enqueue
 from app.events.registry import event_handler, job_handler
 
@@ -20,9 +19,10 @@ log = logging.getLogger("revenue_os.channels")
 @job_handler("channel.process_webhook")
 async def process_webhook_job(session, tenant_id, payload):  # noqa: ANN001
     """Process normalized webhook messages: conversation + message + lead."""
+    from datetime import UTC, datetime
+
     from app.channels.models import WebhookEvent
     from app.conversations.service import get_or_open_conversation, resolve_inbound_identity
-    from datetime import UTC, datetime
 
     webhook_id = payload.get("webhook_id")
     messages = payload.get("messages", [])
@@ -101,9 +101,9 @@ async def on_message_received(session, envelope):  # noqa: ANN001
     conversation_id = payload.get("conversation_id")
     if not conversation_id or not envelope.get("tenant_id"):
         return
+
     from app.conversations.models import Conversation
     from app.leads.models import Lead
-    from sqlalchemy import func
 
     tenant_id = uuid.UUID(envelope["tenant_id"])
     conv = (

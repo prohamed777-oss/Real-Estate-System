@@ -6,10 +6,10 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
-from pgvector.sqlalchemy import Vector
 
 from app.core.config import settings
 from app.core.db import Base, Timestamped, UUIDPk

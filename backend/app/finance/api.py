@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
@@ -14,9 +13,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_session
 from app.core.errors import NotFound
-from app.core.permissions import DEALS_READ, DEALS_WRITE, FINANCE_READ, FINANCE_WRITE, require
+from app.core.permissions import DEALS_READ, DEALS_WRITE, FINANCE_WRITE, require
 from app.core.tenancy import AuthContext
-from app.finance.models import Commission, CommissionRule, Contract, Deal, Payment, PaymentSchedule
+from app.finance.models import Commission, CommissionRule, Deal
 from app.finance.service import (
     approve_commission,
     calculate_commissions,

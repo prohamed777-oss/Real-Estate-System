@@ -12,10 +12,11 @@ availability from canonical inventory (§1.2, §60).
 from __future__ import annotations
 
 import uuid
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
-from typing import Any, Awaitable, Callable
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -89,7 +90,6 @@ async def execute_tool(
         derive_idempotency_key,
         issue_grant,
     )
-    from app.decision.models import ApprovalRequest
 
     resource, _, action = (t.permission or f"{tool_name}:execute").partition(":")
     agent_grantee = actor_id or tool_name
@@ -263,7 +263,7 @@ async def check_availability_tool(session, *, tenant_id, asset_ids):
     {"type": "object", "properties": {"person_id": {"type": "string"}}, "required": ["person_id"]},
 )
 async def get_customer_context(session, *, tenant_id, person_id):
-    from app.identity.models import CustomerProfile, Person
+    from app.identity.models import Person
     from app.leads.models import Lead, LeadRequirement
 
     person = (
@@ -305,8 +305,6 @@ async def get_customer_context(session, *, tenant_id, person_id):
 async def find_viewing_slots(session, *, tenant_id, date, salesperson_id=None):
     """Simple availability grid — full scheduling engine lands with calendars (M8)."""
     from datetime import datetime, timedelta
-
-    from sqlalchemy import func
 
     from app.sales.models import Viewing
 

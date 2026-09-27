@@ -11,7 +11,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_session
-from app.core.errors import NotFound
 from app.core.permissions import AI_RUN, PROPERTIES_READ, require
 from app.core.tenancy import AuthContext
 from app.events.queue import enqueue

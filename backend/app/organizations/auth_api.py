@@ -14,7 +14,7 @@ from app.core.config import settings
 from app.core.db import get_session
 from app.core.errors import NotAuthenticated
 from app.core.security import decode_token, get_auth
-from app.core.tenancy import AuthContext, current_auth
+from app.core.tenancy import AuthContext
 from app.organizations.models import FeatureFlag, Membership, Role, User
 from app.organizations.provisioning import provision_tenant
 
@@ -55,8 +55,9 @@ async def bootstrap(
     if not email:
         raise NotAuthenticated("Token has no email claim")
 
-    from app.organizations.models import Tenant
     from sqlalchemy import select
+
+    from app.organizations.models import Tenant
 
     slug_v = slugify(body.slug or body.tenant_name)
     existing = (

@@ -21,7 +21,7 @@ from app.finance.models import (
     Payment,
     PaymentSchedule,
 )
-from app.sales.models import Offer, Opportunity, Reservation
+from app.sales.models import Opportunity, Reservation
 
 
 async def create_contract_from_reservation(

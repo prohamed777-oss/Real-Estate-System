@@ -22,8 +22,8 @@ async def tick() -> dict:
     from app import bootstrap  # registers ALL domain event/job handlers
 
     bootstrap.load_all()
-    from app.jobs.api import _tick
     from app.core.db import session_factory
+    from app.jobs.api import _tick
 
     async with session_factory() as session:
         async with session.begin():

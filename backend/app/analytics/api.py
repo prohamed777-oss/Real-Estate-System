@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
-import uuid
 from typing import Any
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.analytics.service import execute_query_plan, funnel, operational_snapshot, parse_nl_question
+from app.analytics.service import (
+    execute_query_plan,
+    funnel,
+    operational_snapshot,
+    parse_nl_question,
+)
 from app.core.db import get_session
 from app.core.permissions import ANALYTICS_READ, require
 from app.core.tenancy import AuthContext

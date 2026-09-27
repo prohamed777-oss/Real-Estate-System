@@ -9,17 +9,14 @@ from __future__ import annotations
 
 import logging
 import uuid
-from typing import Any
+from datetime import UTC, datetime
 
 import httpx
-from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
-from app.core.errors import ExternalProviderError
 from app.automation.models import Notification
-from app.organizations.models import User
+from app.core.config import settings
 from app.organizations.models import User
 
 log = logging.getLogger("revenue_os.email")

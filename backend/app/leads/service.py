@@ -11,14 +11,13 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import tenancy
 from app.core.audit import audit
 from app.core.errors import NotFound, ValidationFailed
 from app.events.outbox import emit
-from app.identity.models import Person
 from app.leads.models import Lead, LeadRequirement
 from app.leads.scoring import compute_scores
 from app.leads.statemachine import LEAD_EVENTS, LeadStateMachine

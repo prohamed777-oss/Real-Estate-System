@@ -12,7 +12,8 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, Index, Integer, Numeric, String, Text, func, text as sqlalchemy_text
+from sqlalchemy import DateTime, Index, Integer, Numeric, String, Text, func
+from sqlalchemy import text as sqlalchemy_text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 

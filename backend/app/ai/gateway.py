@@ -147,7 +147,7 @@ class MockModelProvider:
         self.script: list[ModelResponse] = []
         self.calls: list[dict[str, Any]] = []
 
-    def script_response(self, *responses: ModelResponse) -> "MockModelProvider":
+    def script_response(self, *responses: ModelResponse) -> MockModelProvider:
         self.script.extend(responses)
         return self
 

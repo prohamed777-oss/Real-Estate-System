@@ -17,19 +17,14 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.ai.gateway import ModelResponse, get_model_provider
-from app.ai.runtime import get_profile
 from app.channels.service import record_inbound_message, record_outbound_message
-from app.conversations.models import Conversation, Message
+from app.identity.models import Identity, Person
 from app.conversations.service import (
     get_or_open_conversation,
-    resolve_inbound_identity,
 )
 from app.core.db import get_session
-from app.core.errors import NotFound, ValidationFailed
-from app.core.idempotency import IdempotencyGuard
+from app.core.errors import NotFound
 from app.core.ratelimit import check_rate_limit
-from app.events.outbox import emit
 from app.identity.models import Person
 from app.leads.service import create_lead
 from app.organizations.models import Tenant
@@ -63,7 +58,7 @@ async def webchat_message(
     """Public endpoint: website visitors chat with the AI Reception Agent.
     Rate limited, session-scoped, tenant-isolated."""
     # rate limit per session (30 msg/min)
-    from app.core.ratelimit import RateLimitExceeded, check_rate_limit
+    from app.core.ratelimit import RateLimitExceeded
 
     try:
         await check_rate_limit(
@@ -133,7 +128,7 @@ async def webchat_message(
     if result.message:
         await record_outbound_message(
             session, conversation=conversation, sender_type="ai",
-            sender_id=f"agent:reception", message_type="text",
+            sender_id="agent:reception", message_type="text",
             text=result.message, attachments=[], provider="webchat",
         )
 

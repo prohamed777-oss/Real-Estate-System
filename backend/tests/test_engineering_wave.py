@@ -6,16 +6,14 @@ from __future__ import annotations
 import uuid
 
 import pytest
-from fastapi import HTTPException
 from sqlalchemy import select
 
-from app.channels.models import ChannelAccount, MessageTemplate
+from app.channels.models import ChannelAccount
 from app.channels.service import connect_channel_account
 from app.channels.templates import create_template, render_template, send_templated_message
 from app.core.crypto import decrypt_config, encrypt_config
 from app.core.db import session_factory
-from app.core.errors import Conflict, NotFound, ValidationFailed
-from app.events.models import Job
+from app.core.errors import Conflict, ValidationFailed
 from app.events.queue import enqueue
 from app.identity.merge import find_duplicates, merge_persons
 from app.identity.models import Person
@@ -234,9 +232,7 @@ async def test_retention_cleans_stale_counters(db):
     assert remaining == 0
 
 
-from decimal import Decimal  # noqa: E402
 
-from app.core.ratelimit import check_rate_limit  # noqa: E402
 from app.leads.service import create_lead  # noqa: E402
 from app.properties.service import (  # noqa: E402
     create_asset,

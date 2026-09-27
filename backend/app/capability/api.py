@@ -11,23 +11,21 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.capability.custom_fields import define_field, get_values, set_value
 from app.capability.gateway import (
     GranteeType,
     assert_outbound_url_allowed,
-    check_capability,
     issue_grant,
     register_webhook_destination,
     revoke_grant,
     verify_webhook_destination,
 )
-from app.capability.custom_fields import define_field, get_values, set_value
 from app.core.db import get_session
-from app.core.errors import NotFound
 from app.core.permissions import (
-    SETTINGS_READ,
-    SETTINGS_WRITE,
     PROPERTIES_READ,
     PROPERTIES_WRITE,
+    SETTINGS_READ,
+    SETTINGS_WRITE,
     require,
 )
 from app.core.tenancy import AuthContext

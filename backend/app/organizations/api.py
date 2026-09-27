@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query
@@ -15,8 +14,7 @@ from app.core.audit import audit
 from app.core.db import get_session
 from app.core.errors import NotFound, ValidationFailed
 from app.core.pagination import CursorPage, encode_cursor
-from app.core.permissions import require, SETTINGS_WRITE, TEAM_WRITE, AUDIT_READ, TEAM_READ
-from app.core.security import get_auth
+from app.core.permissions import AUDIT_READ, SETTINGS_WRITE, TEAM_READ, TEAM_WRITE, require
 from app.core.tenancy import AuthContext
 from app.organizations.models import (
     AuditLog,

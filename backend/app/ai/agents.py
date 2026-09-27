@@ -10,7 +10,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.models import AgentProfile
-from app.ai.tools import CLASS_APPROVAL, CLASS_CONTROLLED
 
 READ_TOOLS = ["search_properties", "get_property", "get_current_price", "check_availability",
               "get_customer_context", "find_viewing_slots"]

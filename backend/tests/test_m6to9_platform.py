@@ -10,20 +10,20 @@ from decimal import Decimal
 import pytest
 from sqlalchemy import func, select
 
-from app.ai.gateway import ModelResponse, MockModelProvider, set_model_provider
+from app.ai.gateway import MockModelProvider, ModelResponse, set_model_provider
 from app.ai.models import AIExecution
 from app.ai.runtime import execute_agent, get_profile
 from app.automation.models import JourneyInstance, Notification, SLATracker
 from app.automation.service import (
     apply_rules_for_event,
-    start_sla_tracker,
     start_journey,
+    start_sla_tracker,
     tick_journeys,
     tick_sla,
 )
 from app.core.db import session_factory
-from app.core.errors import Conflict, PermissionDenied, ValidationFailed
-from app.finance.models import Commission, Contract, Deal, PaymentSchedule
+from app.core.errors import ValidationFailed
+from app.finance.models import PaymentSchedule
 from app.finance.service import (
     calculate_commissions,
     close_deal,
@@ -33,10 +33,9 @@ from app.finance.service import (
     schedule_payment_plan,
 )
 from app.importer.service import parse_workbook, run_import
-from app.leads.models import Lead
 from app.leads.service import create_lead
 from app.properties.service import create_asset, create_project, set_price
-from app.sales.models import Offer, Reservation
+from app.sales.models import Reservation
 from app.sales.service import (
     create_offer,
     create_opportunity,
@@ -286,7 +285,12 @@ async def test_m9_analytics_funnel_and_nl_query(db, tenant, owner_ctx):
     async with db.begin():
         await close_deal(db, deal=deal, event="contract", actor_id=owner_ctx.user_id)
         await close_deal(db, deal=deal, event="win", actor_id=owner_ctx.user_id)
-    from app.analytics.service import execute_query_plan, funnel, operational_snapshot, parse_nl_question
+    from app.analytics.service import (
+        execute_query_plan,
+        funnel,
+        operational_snapshot,
+        parse_nl_question,
+    )
 
     async with db.begin():
         snapshot = await operational_snapshot(db, tenant.id)
@@ -308,9 +312,8 @@ async def test_m9_analytics_funnel_and_nl_query(db, tenant, owner_ctx):
 
 
 def test_m9_importer_parses_csv():
-    import io
 
-    csv_bytes = "title,property_type,bedrooms,price\nc,apartment,3,4000000\n".encode()
+    csv_bytes = b"title,property_type,bedrooms,price\nc,apartment,3,4000000\n"
     rows = parse_workbook(csv_bytes, "test.csv")
     assert len(rows) == 1
     assert rows[0]["title"] == "c"

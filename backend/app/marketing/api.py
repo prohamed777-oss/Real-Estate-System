@@ -15,10 +15,8 @@ from app.core.db import get_session
 from app.core.errors import NotFound
 from app.core.permissions import MARKETING_READ, MARKETING_WRITE, require
 from app.core.tenancy import AuthContext
-from app.marketing.models import Attribution, Campaign, LeadSource
+from app.marketing.models import Attribution, Campaign
 from app.marketing.service import (
-    CONTENT_KINDS,
-    capture_attribution,
     create_campaign,
     generate_content,
     publish_content,

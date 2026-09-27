@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 
-from app.identity.models import Person
 from app.organizations.models import Tenant
 
 
