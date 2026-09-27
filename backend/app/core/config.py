@@ -42,7 +42,16 @@ class Settings(BaseSettings):
     secret_encryption_key: str = ""  # Fernet key or passphrase; empty = derived (dev)
 
     # --- V4 event transport (optional) ---
-    nats_url: str = ""  # e.g. nats://nats.railway.internal:4222
+    nats_url: str = ""
+
+    # --- A5: email delivery ---
+    resend_api_key: str = ""
+
+    # --- B2: error tracking ---
+    sentry_dsn: str = ""
+
+    # --- A4: storage bucket ---
+    storage_bucket: str = "media"  # e.g. nats://nats.railway.internal:4222
 
     # --- AI (Model Gateway) ---
     ai_provider: str = "mock"  # mock | gemini | openai_compatible

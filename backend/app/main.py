@@ -22,6 +22,9 @@ log = logging.getLogger("revenue_os")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     log.info("starting %s (env=%s)", settings.app_name, settings.app_env)
+    from app.core.observability import init_sentry
+
+    init_sentry()
     # Seed global agent profiles (idempotent) — ONE runtime, many profiles
     from app.ai.agents import seed_default_profiles
     from app.core.db import session_factory
@@ -122,8 +125,10 @@ def create_app() -> FastAPI:
 
     prefix = settings.api_prefix
     from app.realtime.sse import router as realtime_router
+    from app.identity.gdpr import router as gdpr_router
 
     app.include_router(realtime_router, prefix=prefix)
+    app.include_router(gdpr_router, prefix=prefix)
     app.include_router(auth_router, prefix=prefix)
     app.include_router(org_router, prefix=prefix)
     app.include_router(identity_router, prefix=prefix)

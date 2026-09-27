@@ -39,8 +39,25 @@ export default function InboxPage() {
 
   useEffect(() => {
     loadConversations();
-    const timer = setInterval(loadConversations, 5000);
-    return () => clearInterval(timer);
+    // SSE real-time (V4 PART 14) — falls back to polling on connection failure
+    let es: EventSource | null = null;
+    let poll: ReturnType<typeof setInterval> | null = null;
+    const token = localStorage.getItem("access_token");
+    const devEmail = localStorage.getItem("dev_email");
+    const authParam = token ? `authorization=Bearer%20${encodeURIComponent(token)}`
+      : devEmail ? `dev_email=${encodeURIComponent(devEmail)}` : "";
+    if (authParam) {
+      es = new EventSource(`/backend/api/v1/realtime/stream?${authParam}`);
+      es.addEventListener("domain_event", () => loadConversations());
+      es.onerror = () => {
+        es?.close();
+        es = null;
+        poll = setInterval(loadConversations, 5000);
+      };
+    } else {
+      poll = setInterval(loadConversations, 5000);
+    }
+    return () => { es?.close(); if (poll) clearInterval(poll); };
   }, [loadConversations]);
 
   useEffect(() => {

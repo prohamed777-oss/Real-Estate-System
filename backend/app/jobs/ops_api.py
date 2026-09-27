@@ -128,21 +128,8 @@ async def trigger_retention(
     return await run_retention(session)
 
 
-# ---------- media storage abstraction ----------
-class StorageBackend:
-    """Local disk in dev; S3-compatible (Supabase Storage) in production."""
-
-    async def put(self, tenant_id: str, filename: str, content: bytes, content_type: str) -> str:
-        import re as _re
-
-        root = Path("/tmp/revenue-os-media") if settings.app_env != "production" else Path("/tmp/media")
-        folder = root / tenant_id
-        folder.mkdir(parents=True, exist_ok=True)
-        # path-traversal proof: strip directories + whitelist safe characters
-        safe_name = _re.sub(r"[^A-Za-z0-9._-]", "_", Path(filename).name) or "file"
-        key = f"{uuid.uuid4().hex}-{safe_name}"[:180]
-        (folder / key).write_bytes(content)
-        return f"local://{folder / key}"
+# ---------- media storage (A4: Supabase Storage production / local dev) ----------
+from app.core.storage import get_storage, sanitize_filename, validate_upload  # noqa: E402
 
 
 @router.post("/media")
@@ -152,12 +139,16 @@ async def upload_media(
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
     content = await file.read()
-    if len(content) > 20 * 1024 * 1024:
-        raise HTTPException(status_code=413, detail="File too large (max 20MB)")
-    backend = StorageBackend()
-    path = await backend.put(str(auth.tenant_id), file.filename or "file.bin", content,
-                             file.content_type or "application/octet-stream")
-    return {"path": path, "filename": file.filename, "size": len(content)}
+    try:
+        validate_upload(content, file.content_type or "application/octet-stream")
+    except ValueError as exc:
+        raise HTTPException(status_code=413, detail=str(exc))
+    backend = get_storage()
+    safe_name = sanitize_filename(file.filename or "file")
+    key = f"{auth.tenant_id}/{uuid.uuid4().hex}-{safe_name}"[:300]
+    path = await backend.put(key, content, file.content_type or "application/octet-stream")
+    return {"path": path, "filename": safe_name, "size": len(content),
+             "public_url": backend.public_url(key) if hasattr(backend, "public_url") else None}
 
 
 # ---------- retention job (enqueued daily by the tick) ----------
