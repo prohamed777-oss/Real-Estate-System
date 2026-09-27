@@ -12,7 +12,7 @@ const NAV: NavGroup[] = [
   {
     titleKey: "nav_group_crm",
     items: [
-      { href: "/", key: "nav_overview", icon: "📊" },
+      { href: "/dashboard", key: "nav_overview", icon: "📊" },
       { href: "/inbox", key: "nav_inbox", icon: "💬" },
       { href: "/leads", key: "nav_leads", icon: "🎯" },
       { href: "/pipeline", key: "nav_pipeline", icon: "📈" },

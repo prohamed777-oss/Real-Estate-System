@@ -59,7 +59,7 @@ export default function LoginPage() {
         if (!res.ok) throw new Error("auth");
       }
       localStorage.setItem("user_email", email);
-      router.push("/");
+      router.push("/dashboard");
     } catch {
       setError(t("signin_error"));
     } finally {
