@@ -90,6 +90,7 @@ async def test_m6_contract_deal_payments_commissions(db, tenant, owner_ctx):
     assert res.status == "CONVERTED"
 
     async with db.begin():
+        await close_deal(db, deal=deal, event="contract", actor_id=owner_ctx.user_id)
         await close_deal(db, deal=deal, event="win", actor_id=owner_ctx.user_id)
         deal_id = deal.id
     # commissions require an active rule
@@ -283,6 +284,7 @@ async def test_m8_durable_journey_survives_wait(db, tenant, owner_ctx):
 async def test_m9_analytics_funnel_and_nl_query(db, tenant, owner_ctx):
     deal, _, _ = await _won_deal(db, tenant, owner_ctx)
     async with db.begin():
+        await close_deal(db, deal=deal, event="contract", actor_id=owner_ctx.user_id)
         await close_deal(db, deal=deal, event="win", actor_id=owner_ctx.user_id)
     from app.analytics.service import execute_query_plan, funnel, operational_snapshot, parse_nl_question
 

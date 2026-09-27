@@ -41,9 +41,12 @@ async def bootstrap(
     request: Request,
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
-    """Production signup completion: caller has JUST registered via Supabase
-    (email/password or OAuth). Their JWT proves identity; we provision the
-    tenant structure and link the internal user row (id = token sub)."""
+    """Production signup completion: creates a NEW tenant for the caller.
+
+    Authorization boundary (hardened): bootstrap NEVER attaches a caller to an
+    existing tenant. If the slug is taken → 409. Joining an existing tenant
+    happens exclusively through explicit invitations (org/memberships API).
+    """
     auth_header = request.headers.get("Authorization", "")
     if not auth_header.startswith("Bearer "):
         raise NotAuthenticated("Missing bearer token")
@@ -51,6 +54,22 @@ async def bootstrap(
     email = claims.get("email")
     if not email:
         raise NotAuthenticated("Token has no email claim")
+
+    from app.organizations.models import Tenant
+    from sqlalchemy import select
+
+    slug_v = slugify(body.slug or body.tenant_name)
+    existing = (
+        await session.execute(select(Tenant).where(Tenant.slug == slug_v))
+    ).scalar_one_or_none()
+    if existing is not None:
+        from app.core.errors import Conflict
+
+        raise Conflict(
+            "Tenant slug already taken — choose another name",
+            details={"slug": slug_v},
+        )
+
     tenant = await provision_tenant(
         session,
         tenant_name=body.tenant_name,

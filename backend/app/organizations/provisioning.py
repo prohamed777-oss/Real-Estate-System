@@ -199,22 +199,16 @@ async def provision_tenant(
                  department="sales")
         )
 
-    owner = await get_or_create_user(
-        session,
-        tenant_id=tenant.id,
-        email=owner_email,
-        full_name=owner_full_name,
-        user_id=owner_user_id,
-        locale=locale,
-    )
-    membership = (
-        await session.execute(
-            select(Membership).where(
-                Membership.user_id == owner.id, Membership.organization_id == org.id
-            )
+    if created:
+        # NEW tenant: its owner is provisioned normally
+        owner = await get_or_create_user(
+            session,
+            tenant_id=tenant.id,
+            email=owner_email,
+            full_name=owner_full_name,
+            user_id=owner_user_id,
+            locale=locale,
         )
-    ).scalar_one_or_none()
-    if membership is None:
         session.add(
             Membership(
                 tenant_id=tenant.id,
@@ -225,6 +219,22 @@ async def provision_tenant(
                 is_primary=True,
             )
         )
+    else:
+        # EXISTING tenant: bootstrap must NEVER attach a new owner (V4 audit #4).
+        # Structure top-up only happens for someone who is ALREADY a member.
+        existing_owner_membership = (
+            await session.execute(
+                select(Membership).where(
+                    Membership.tenant_id == tenant.id,
+                    Membership.role_id == role_ids["owner"],
+                )
+            )
+        ).scalars().first()
+        if existing_owner_membership is not None:
+            existing_owner_user = await session.get(User, existing_owner_membership.user_id)
+            if existing_owner_user and existing_owner_user.email != owner_email.lower():
+                pass  # different email → no membership is created, nothing is linked
+    await session.flush()
 
     existing_flags = set(
         (

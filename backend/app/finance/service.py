@@ -113,8 +113,13 @@ async def close_deal(
 ) -> Deal:
     if event not in ("win", "lose", "cancel", "contract"):
         raise ValidationFailed(f"Unknown deal event: {event}")
+    # Deal lifecycle enforced by a STATE MACHINE (review fix #16) — not a mapping
+    from app.sales.statemachine import DealStateMachine
+
+    sm = DealStateMachine(deal.status)
+    sm.fire(event)
     before = deal.status
-    deal.status = {"win": "WON", "lose": "LOST", "cancel": "CANCELLED", "contract": "CONTRACTED"}[event]
+    deal.status = sm.state
     if deal.status in ("WON", "LOST", "CANCELLED"):
         deal.closed_at = datetime.now(UTC)
         deal.lost_reason = reason if deal.status in ("LOST", "CANCELLED") else None
@@ -185,8 +190,8 @@ async def record_payment(
     await session.flush()
     if schedule_id:
         row = await session.get(PaymentSchedule, schedule_id)
-        if row is None:
-            raise NotFound("Schedule row not found")
+        if row is None or row.tenant_id != tenant_id:
+            raise NotFound("Schedule row not found for this tenant")
         row.status = "completed"
         row.payment_id = payment.id
     await audit(
@@ -226,7 +231,16 @@ async def calculate_commissions(
     ).scalars().all()
     if not rules:
         raise ValidationFailed("No active commission rules configured")
-    rule = rules[0]  # scope matching (project/branch) refines selection as data grows
+    # scope precedence (V4 audit #17): project/branch-specific > global, latest wins
+    from app.finance.models import Deal as DealRow
+
+    deal_row = await session.get(DealRow, deal_id)
+    scoped = [
+        r for r in rules
+        if not r.scope  # global
+        or r.scope.get("project_id") == str(getattr(deal_row, "asset_id", "") or "")
+    ]
+    rule = scoped[0] if scoped else rules[0]
     created: list[Commission] = []
     for beneficiary_type, pct in rule.splits.items():
         if not pct:

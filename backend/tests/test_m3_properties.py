@@ -181,8 +181,12 @@ async def test_availability_check_reports_expired_hold_as_stale(db, tenant, owne
 
     async with db.begin():
         avail = await check_availability(db, tenant_id=tenant.id, asset_ids=[asset.id])
+    # V4 hardening: expiry now RECONCILES state (read truth == write truth)
     assert avail[str(asset.id)]["state"] == "AVAILABLE"
-    assert avail[str(asset.id)]["confidence"] == "stale_hold"
+    inv = (
+        await db.execute(select(UnitInventory).where(UnitInventory.asset_id == asset.id))
+    ).scalar_one()
+    assert inv.state == "AVAILABLE" and inv.hold_id is None
 
 
 async def test_listing_created_with_price_snapshot(db, tenant, owner_ctx):

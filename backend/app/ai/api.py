@@ -25,7 +25,9 @@ class AgentExecuteIn(BaseModel):
     conversation_id: uuid.UUID | None = None
     lead_id: uuid.UUID | None = None
     person_id: uuid.UUID | None = None
-    high_value_approved: bool = False
+    # V4 5.4: approvals are REAL ApprovalRequest rows bound to args —
+    # a boolean can never unlock an approval-required tool.
+    approval_id: uuid.UUID | None = None
     history: list[dict[str, Any]] | None = None
 
 
@@ -66,7 +68,7 @@ async def execute(
         session, tenant_id=auth.tenant_id, profile=profile, user_message=body.message,
         conversation_id=body.conversation_id, lead_id=body.lead_id, person_id=body.person_id,
         permissions=set(auth.permissions), history=body.history,
-        high_value_approved=body.high_value_approved,
+        approval_id=body.approval_id,
     )
     await record_usage(session, tenant_id=auth.tenant_id, kind="ai_requests",
                        cost_usd=0.0)

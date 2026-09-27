@@ -119,3 +119,28 @@ Per the V4 consolidated architecture (Capabilities/Decision Plane/Data Plane):
 - **NATS transport (4.3)**: optional tenant-scoped fan-out behind the durable pipeline.
 - **AI trust filter (4.4)**: only VERIFIED claims reach the model context.
 - **Tests: 97 green** (11 V4-specific). Tables: 95. RLS: 86 policies.
+
+## Hardening Wave — external-audit remediation (27 findings → all addressed) ✅
+
+P0 fixes:
+- /auth/bootstrap tenant takeover: CLOSED — existing slug → 409, no auto-owner-attach
+- AI approvals: boolean → REAL ApprovalRequest bound by args-hash (V4 5.4)
+- AI effective permissions: agent ∩ caller (never union) — least privilege
+- execute_tool now passes through the Capability Gateway (AI_AGENT grantee)
+- Meta webhook routing: phone_number_id → exact decrypted account → fail-closed
+
+P1 fixes:
+- Price versioning: FOR UPDATE serialization + ONE-current-price partial unique index
+- Offer versions: unique (tenant, opportunity, version) index
+- Viewings: GiST EXCLUSION constraint — overlapping bookings IMPOSSIBLE in DB (TOCTOU-proof)
+- Hold expiry: read truth == write truth (expired holds reconcile + ledger + event)
+- Inventory ledger: records REAL from_state (no hardcoded AVAILABLE)
+- Deal lifecycle: DealStateMachine — OPEN→CONTRACTED→WON (no direct skip)
+- Idempotency race: IntegrityError → proper replay/conflict response
+- Commission engine: scope-aware rule selection
+- Budget/deadline: pre-check BEFORE each AI call (not post-hoc)
+- Storage: path-traversal-proof filename sanitization
+- requirements.txt: email-validator + nats-py added
+- RLS completion: audit_log + claims + signals + projection_registry covered
+
+Tests: 110 green (13 hardening-specific). Tables: 95. RLS: 90 policies.

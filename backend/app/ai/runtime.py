@@ -125,7 +125,7 @@ async def execute_agent(
     session: AsyncSession, *, tenant_id: uuid.UUID | None, profile: AgentProfile,
     user_message: str, conversation_id: uuid.UUID | None = None, lead_id: uuid.UUID | None = None,
     person_id: uuid.UUID | None = None, permissions: set[str] | None = None,
-    history: list[dict[str, Any]] | None = None, high_value_approved: bool = False,
+    history: list[dict[str, Any]] | None = None, approval_id: uuid.UUID | None = None,
 ) -> AgentResult:
     started = time.monotonic()
     provider = get_model_provider()
@@ -157,6 +157,28 @@ async def execute_agent(
     )
     messages.append({"role": "user", "content": user_message})
 
+    # V4 5.4/1.27: approvals are REAL rows bound to args — never a boolean.
+    approval_row = None
+    if approval_id is not None:
+        from app.decision.models import ApprovalRequest
+
+        approval_row = (
+            await session.execute(
+                select(ApprovalRequest).where(
+                    ApprovalRequest.id == approval_id,
+                    ApprovalRequest.tenant_id == tenant_id,
+                    ApprovalRequest.status == "APPROVED",
+                )
+            )
+        ).scalar_one_or_none()
+        if approval_row is None:
+            raise DomainError(
+                "Approval not found or not APPROVED", code="approval_invalid", status_code=403
+            )
+
+    # V4 review fix #3: effective permissions = agent scope ∩ caller scope.
+    effective_permissions = set(profile.permissions or []) & (permissions or set())
+
     tool_call_log: list[dict[str, Any]] = []
     guardrail_flags: list[str] = []
     final_message: str | None = None
@@ -167,6 +189,17 @@ async def execute_agent(
 
     try:
         for step in range(profile.max_steps):
+            # V4 audit #23: budget/deadline enforced BEFORE each call, not after
+            if (time.monotonic() - started) * 1000 > profile.max_latency_ms:
+                status = "failed"
+                stop_reason = "max_latency_exceeded"
+                final_message = "انتهت المدة المسموحة للمعالجة — يتم التحويل لموظف."
+                break
+            if profile.max_cost_usd <= 0 or cost >= profile.max_cost_usd:
+                status = "failed"
+                stop_reason = "budget_exceeded"
+                final_message = "تم تجاوز ميزانية التنفيذ — يتم التحويل لموظف."
+                break
             response: ModelResponse = await provider.chat(
                 messages, tool_schemas or None, profile.model_profile
             )
@@ -183,8 +216,8 @@ async def execute_agent(
                     tool_result = await execute_tool(
                         session, tenant_id=tenant_id, tool_name=tc["name"], args=tc.get("args", {}),
                         actor_id=f"agent:{profile.key}:v{profile.version}",
-                        on_behalf_permissions=set(profile.permissions or []) | (permissions or set()),
-                        high_value_approved=high_value_approved,
+                        on_behalf_permissions=effective_permissions,
+                        approval=approval_row,
                     )
                     tool_call_log.append({
                         "step": step, "name": tc["name"], "args": tc.get("args", {}),

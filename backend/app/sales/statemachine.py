@@ -78,3 +78,12 @@ class ReservationStateMachine(StateMachine):
         "EXPIRED": {},
     }
     terminal = {"CONVERTED", "CANCELLED", "EXPIRED"}
+
+
+class DealStateMachine(StateMachine):
+    initial = "OPEN"
+    transitions = {
+        "OPEN": {"contract": "CONTRACTED", "lose": "LOST", "cancel": "CANCELLED"},
+        "CONTRACTED": {"win": "WON", "lose": "LOST", "cancel": "CANCELLED"},
+    }
+    terminal = {"WON", "LOST", "CANCELLED"}

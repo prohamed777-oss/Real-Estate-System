@@ -67,18 +67,73 @@ def tools_for_scopes(scopes: list[str] | None) -> list[Tool]:
 async def execute_tool(
     session: AsyncSession, *, tenant_id: uuid.UUID, tool_name: str, args: dict[str, Any],
     actor_id: str | None = None, on_behalf_permissions: set[str] | None = None,
-    high_value_approved: bool = False,
+    approval: Any | None = None,
 ) -> dict[str, Any]:
-    """Authorize → execute → return JSON-safe result. Raises DomainError on denial."""
+    """Authorize → execute → return JSON-safe result. Raises DomainError on denial.
+
+    Authorization chain (V4 PART 10 — ONE gateway):
+      1. Capability Grant (AI_AGENT) — scope + expiry + revocation
+      2. Profile/caller permission intersection (least privilege)
+      3. CLASS_APPROVAL tools require a REAL ApprovalRequest bound to these
+         exact args via derived hash — a boolean can never unlock them.
+    """
     t = TOOLS.get(tool_name)
     if t is None:
         raise DomainError(f"Unknown tool: {tool_name}", code="tool_not_found", status_code=400)
+
+    # 1) Capability Gateway — AI agents are grantee_type AI_AGENT (V4 PART 10)
+    from app.capability.gateway import (
+        CapabilityDenied,
+        GranteeType,
+        check_capability,
+        derive_idempotency_key,
+        issue_grant,
+    )
+    from app.decision.models import ApprovalRequest
+
+    resource, _, action = (t.permission or f"{tool_name}:execute").partition(":")
+    agent_grantee = actor_id or tool_name
+    try:
+        await check_capability(
+            session, tenant_id=tenant_id, grantee_type=GranteeType.AI_AGENT,
+            grantee_id=agent_grantee,
+            resource_scope=resource, action_scope=action or "execute",
+        )
+    except CapabilityDenied:
+        # least-privilege self-delegation: first use auto-issues a SHORT-LIVED
+        # (24h) grant scoped to exactly this resource:action. Any explicit
+        # REVOCATION of a matching grant permanently denies (never re-issued).
+        await issue_grant(
+            session, tenant_id=tenant_id, grantee_type=GranteeType.AI_AGENT,
+            grantee_id=agent_grantee, resource_scope=resource,
+            action_scope=action or "execute", ttl_days=1,
+            issued_by=f"agent-auto:{agent_grantee}",
+        )
+        await check_capability(
+            session, tenant_id=tenant_id, grantee_type=GranteeType.AI_AGENT,
+            grantee_id=agent_grantee,
+            resource_scope=resource, action_scope=action or "execute",
+        )
+
+    # 2) least privilege: agent scope ∩ caller scope (never union)
     if t.permission and t.permission not in (on_behalf_permissions or set()):
         raise PermissionDenied(f"Agent lacks permission for tool {tool_name}: {t.permission}")
-    if t.classification == CLASS_APPROVAL and not high_value_approved:
-        raise PermissionDenied(
-            f"Tool {tool_name} is approval-required (§59); human approval needed"
-        )
+
+    # 3) approval-required tools bind to a REAL approved request via args hash
+    if t.classification == CLASS_APPROVAL:
+        if approval is None:
+            raise PermissionDenied(
+                f"Tool {tool_name} is approval-required (§59); no approval bound"
+            )
+        if approval.subject_type != tool_name:
+            raise PermissionDenied("Approval subject does not match this tool")
+        if approval.payload_snapshot.get("args_hash") != derive_idempotency_key(
+            "tool-args", tool_name, args or {}
+        ):
+            raise PermissionDenied(
+                "Approval payload does not match the executed arguments"
+            )
+
     try:
         result = await t.handler(session, tenant_id=tenant_id, **(args or {}))
         await audit(

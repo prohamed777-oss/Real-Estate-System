@@ -20,6 +20,8 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from sqlalchemy.exc import IntegrityError
+
 from app.core.errors import IdempotencyConflict
 
 
@@ -78,7 +80,27 @@ class IdempotencyGuard:
                 expires_at=datetime.now(UTC) + timedelta(hours=24),
             )
         )
-        await self.session.flush()
+        try:
+            await self.session.flush()
+        except IntegrityError:
+            # concurrent same-key request won the unique race (V4 audit #24)
+            await self.session.rollback()
+            winner = (
+                await self.session.execute(
+                    select(IdempotencyKey).where(
+                        IdempotencyKey.tenant_id == self.tenant_id,
+                        IdempotencyKey.key == key,
+                    )
+                )
+            ).scalar_one()
+            if winner.request_hash != ph:
+                raise IdempotencyConflict(
+                    "Idempotency-Key was already used with a different payload",
+                    details={"key": key},
+                )
+            if winner.response_snapshot is not None:
+                return winner.response_snapshot
+            raise IdempotencyConflict("Request with this Idempotency-Key is still in flight")
         return None
 
     async def commit(self, response: dict[str, Any]) -> None:

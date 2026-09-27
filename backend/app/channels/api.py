@@ -45,65 +45,78 @@ async def meta_verify(
 
 @router.post("/webhooks/meta-whatsapp")
 async def meta_webhook(request: Request, session: AsyncSession = Depends(get_session)):
-    from app.channels.meta_whatsapp import MetaWhatsAppAdapter
+    """Meta webhook (V4-hardened multi-tenant routing):
 
+    parse → phone_number_id → EXACT ChannelAccount (decrypted) → tenant
+    → signature verification (fail-closed) → persist raw → dedup → async.
+    """
+    from app.channels.meta_whatsapp import MetaWhatsAppAdapter
+    from app.core.crypto import decrypt_config
+    from datetime import UTC, datetime
+
+    body_bytes = await request.body()
     payload = await request.json()
     signature = request.headers.get("X-Hub-Signature-256")
-    # Signature verification uses the app secret of the matching account; when
-    # configured we verify, otherwise (dev) we accept and persist raw.
-    body_bytes = await request.body()
-    webhook, is_new = await persist_webhook(
-        session, provider="meta_whatsapp", channel="whatsapp", payload=payload,
-        signature=signature,
-    )
-    if not is_new:
-        webhook.status = "duplicate"
-        return {"status": "duplicate"}
 
-    from app.core.config import settings as cfg
-    from app.channels.service import _find_tenant_for_provider_ref
-
-    # Signature enforcement is FAIL-CLOSED: a connected Meta account WITHOUT
-    # app_secret rejects webhooks rather than accepting unverified traffic.
-    tenant_id = await _find_tenant_for_provider_ref(session, provider="meta_whatsapp", provider_ref=None)
-    if tenant_id:
-        account = (
-            await session.execute(
-                select(ChannelAccount).where(
-                    ChannelAccount.tenant_id == tenant_id, ChannelAccount.provider == "meta_whatsapp"
-                )
-            )
-        ).scalar_one_or_none()
-        if account:
-            if not account.config.get("app_secret"):
-                webhook.status = "failed"
-                webhook.error = "account missing app_secret — signature cannot be verified"
-                raise ValidationFailed(
-                    "Meta account configured without app_secret — configure it to receive webhooks"
-                )
-            if not MetaWhatsAppAdapter.verify_webhook_signature(
-                body_bytes, signature or "", account.config["app_secret"]
-            ):
-                webhook.status = "failed"
-                webhook.error = "invalid signature"
-                raise ValidationFailed("Invalid webhook signature")
-
-    # Normalize now to extract tenant binding, then process async
+    # 1) normalize FIRST — the payload itself carries the routing key
     normalized = MetaWhatsAppAdapter.parse_webhook(payload)
     if not normalized:
-        webhook.status = "processed"
-        webhook.processed_at = __import__("datetime").datetime.now(__import__("datetime").UTC)
+        await persist_webhook(session, provider="meta_whatsapp", channel="whatsapp",
+                              payload=payload, signature=signature, tenant_id=None)
         return {"status": "ignored"}
+    phone_number_id = normalized[0].get("phone_number_id")
 
-    first = normalized[0]
-    if tenant_id is None:
-        tenant_id = await _find_tenant_for_provider_ref(
-            session, provider="meta_whatsapp", provider_ref=first.get("phone_number_id")
+    # 2) exact account by decrypted phone_number_id — never "any connected account"
+    accounts = (
+        await session.execute(
+            select(ChannelAccount).where(
+                ChannelAccount.provider == "meta_whatsapp",
+                ChannelAccount.status == "connected",
+            )
         )
-    if tenant_id is None:
+    ).scalars().all()
+    account = None
+    for a in accounts:
+        cfg = decrypt_config(a.config or {})
+        if cfg.get("phone_number_id") == phone_number_id:
+            account = a
+            break
+    if account is None:
+        webhook, _ = await persist_webhook(
+            session, provider="meta_whatsapp", channel="whatsapp", payload=payload,
+            signature=signature, tenant_id=None,
+        )
         webhook.status = "failed"
-        webhook.error = "no connected channel account"
+        webhook.error = "no connected account matches phone_number_id"
         raise ValidationFailed("No connected WhatsApp account for this webhook")
+    tenant_id = account.tenant_id
+
+    # 3) signature verification — FAIL-CLOSED, against THIS account's secret
+    if not account.config.get("app_secret") and "_encrypted" not in (account.config or {}):
+        webhook, _ = await persist_webhook(
+            session, provider="meta_whatsapp", channel="whatsapp", payload=payload,
+            signature=signature, tenant_id=tenant_id,
+        )
+        webhook.status = "failed"
+        webhook.error = "account missing app_secret"
+        raise ValidationFailed("Meta account configured without app_secret")
+    secret = decrypt_config(account.config or {}).get("app_secret", "")
+    if not MetaWhatsAppAdapter.verify_webhook_signature(body_bytes, signature or "", secret):
+        webhook, _ = await persist_webhook(
+            session, provider="meta_whatsapp", channel="whatsapp", payload=payload,
+            signature=signature, tenant_id=tenant_id,
+        )
+        webhook.status = "failed"
+        webhook.error = "invalid signature"
+        raise ValidationFailed("Invalid webhook signature")
+
+    # 4) dedup + persist raw + enqueue async processing
+    webhook, is_new = await persist_webhook(
+        session, provider="meta_whatsapp", channel="whatsapp", payload=payload,
+        signature=signature, tenant_id=tenant_id,
+    )
+    if not is_new:
+        return {"status": "duplicate"}
 
     webhook.status = "processing"
     await enqueue(

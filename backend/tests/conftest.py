@@ -98,6 +98,28 @@ async def _schema():
             AFTER INSERT OR UPDATE ON commission_splits
             FOR EACH ROW EXECUTE FUNCTION check_commission_split_total();
         """))
+        await conn.execute(text(
+            "CREATE UNIQUE INDEX IF NOT EXISTS uq_price_one_current "
+            "ON price_versions (tenant_id, asset_id) WHERE valid_to IS NULL"
+        ))
+        await conn.execute(text(
+            "CREATE UNIQUE INDEX IF NOT EXISTS uq_offer_version "
+            "ON offers (tenant_id, opportunity_id, version)"
+        ))
+        await conn.execute(text("CREATE EXTENSION IF NOT EXISTS btree_gist"))
+        await conn.execute(text("""
+            CREATE OR REPLACE FUNCTION viewing_end(t timestamptz, mins int) RETURNS timestamptz
+            AS $$ SELECT t + (mins * interval '1 minute') $$ LANGUAGE sql IMMUTABLE PARALLEL SAFE;
+        """))
+        await conn.execute(text("""
+            ALTER TABLE viewings ADD CONSTRAINT ex_viewing_no_overlap
+            EXCLUDE USING gist (
+                tenant_id WITH =,
+                salesperson_id WITH =,
+                tstzrange(scheduled_at, viewing_end(scheduled_at, duration_minutes)) WITH &&
+            )
+            WHERE (status IN ('REQUESTED', 'CONFIRMED') AND salesperson_id IS NOT NULL)
+        """))
         await conn.execute(text("""
             CREATE OR REPLACE FUNCTION finalize_commission_splits(
                 p_deal_id UUID, p_agency_role TEXT DEFAULT 'agency'

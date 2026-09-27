@@ -133,10 +133,14 @@ class StorageBackend:
     """Local disk in dev; S3-compatible (Supabase Storage) in production."""
 
     async def put(self, tenant_id: str, filename: str, content: bytes, content_type: str) -> str:
+        import re as _re
+
         root = Path("/tmp/revenue-os-media") if settings.app_env != "production" else Path("/tmp/media")
         folder = root / tenant_id
         folder.mkdir(parents=True, exist_ok=True)
-        key = f"{uuid.uuid4().hex}-{filename}"[:180]
+        # path-traversal proof: strip directories + whitelist safe characters
+        safe_name = _re.sub(r"[^A-Za-z0-9._-]", "_", Path(filename).name) or "file"
+        key = f"{uuid.uuid4().hex}-{safe_name}"[:180]
         (folder / key).write_bytes(content)
         return f"local://{folder / key}"
 

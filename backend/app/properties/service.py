@@ -141,6 +141,14 @@ async def set_price(
 ) -> PriceVersion:
     await get_asset(session, tenant_id, asset_id)
     now = datetime.now(UTC)
+    # serialize concurrent re-pricings: lock the asset's price rows first
+    await session.execute(
+        select(PriceVersion.id)
+        .where(PriceVersion.tenant_id == tenant_id, PriceVersion.asset_id == asset_id)
+        .order_by(PriceVersion.valid_from.desc())
+        .limit(1)
+        .with_for_update()
+    )
     # close the current version, open the new one — history never rewritten
     current = (
         await session.execute(
@@ -252,11 +260,12 @@ async def hold_unit(
         )
         session.add(hold)
         await session.flush()
+        from_state = inv.state
         inv.state = "HELD"
         inv.hold_id = hold.id
         inv.version += 1
         await _ledger(session, tenant_id=tenant_id, asset_id=asset_id,
-                      from_state="AVAILABLE", to_state="HELD",
+                      from_state=from_state, to_state="HELD",
                       actor_type="user", actor_id=created_by, reason=reason)
         await audit(
             session, tenant_id=tenant_id, actor_type="user", actor_id=created_by,
@@ -410,14 +419,26 @@ async def check_availability(session: AsyncSession, *, tenant_id: uuid.UUID,
     ).scalars().all()
     out: dict[str, dict] = {}
     for inv in rows:
-        state = inv.state
-        confidence = inv.availability_confidence
         if inv.state == "HELD" and inv.hold_id:
             hold = await session.get(InventoryHold, inv.hold_id)
             if hold and hold.status == "active" and hold.expires_at < now:
-                state = "AVAILABLE"  # expired hold — reconciles lazily
-                confidence = "stale_hold"
-        out[str(inv.asset_id)] = {"state": state, "confidence": confidence}
+                # read truth == write truth: expire the hold transactionally
+                # (V4 audit fix #14) instead of reporting a phantom state
+                hold.status = "expired"
+                inv.state = "AVAILABLE"
+                inv.hold_id = None
+                inv.version += 1
+                await _ledger(session, tenant_id=tenant_id, asset_id=inv.asset_id,
+                              from_state="HELD", to_state="AVAILABLE",
+                              actor_type="system", actor_id="hold-expiry",
+                              reason="hold expired")
+                await emit(
+                    session, event_name=INVENTORY_EVENTS["release"],
+                    tenant_id=tenant_id, aggregate_type="property_asset",
+                    aggregate_id=inv.asset_id,
+                    payload={"asset_id": str(inv.asset_id), "reason": "hold_expired"},
+                )
+        out[str(inv.asset_id)] = {"state": inv.state, "confidence": inv.availability_confidence}
     return out
 
 
