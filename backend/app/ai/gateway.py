@@ -112,7 +112,11 @@ class GeminiProvider:
             gemini_role = "model" if role == "assistant" else "user"
             parts = [{"text": m.get("content") or ""}]
             for tc in m.get("tool_calls") or []:
-                parts.append({"functionCall": {"name": tc["name"], "args": tc.get("args", {})}})
+                fc = {"name": tc["name"], "args": tc.get("args", {})}
+                part = {"functionCall": fc}
+                if tc.get("thought_signature"):
+                    part["thoughtSignature"] = tc["thought_signature"]
+                parts.append(part)
             contents.append({"role": gemini_role, "parts": parts})
         return contents, "\n\n".join(system_text) or None
 
@@ -121,7 +125,8 @@ class GeminiProvider:
         parts = (candidates[0].get("content") or {}).get("parts", [])
         text = "".join(p.get("text", "") for p in parts if "text" in p)
         tool_calls = [
-            {"name": p["functionCall"]["name"], "args": p["functionCall"].get("args", {})}
+            {"name": p["functionCall"]["name"], "args": p["functionCall"].get("args", {}),
+             "thought_signature": p.get("thoughtSignature")}
             for p in parts if "functionCall" in p
         ]
         usage = data.get("usageMetadata", {})
