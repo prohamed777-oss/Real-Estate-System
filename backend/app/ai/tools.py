@@ -367,7 +367,7 @@ async def create_task_tool(session, *, tenant_id, title, due_at=None, priority="
     {"type": "object",
      "properties": {"lead_id": {"type": "string"},
                      "explicit": {"type": "object"},
-                     "objections": {"type": "array"},
+                     "objections": {"type": "array", "items": {"type": "string"}},
                      "timeline": {"type": "string"},
                      "confidence": {"type": "integer"}},
      "required": ["lead_id"]},
