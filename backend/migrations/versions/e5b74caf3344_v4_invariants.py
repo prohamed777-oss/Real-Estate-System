@@ -20,7 +20,7 @@ def upgrade() -> None:
         BEGIN
             SELECT COALESCE(SUM(share_percentage), 0) INTO total
             FROM commission_splits WHERE deal_id = NEW.deal_id;
-            IF total > 100.00 THEN
+            IF total <> 100.00 THEN
                 RAISE EXCEPTION 'commission splits for deal % total % (must be exactly 100.00)',
                     NEW.deal_id, total;
             END IF;
