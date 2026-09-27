@@ -95,6 +95,9 @@ async def list_leads(
         .where(Lead.tenant_id == auth.tenant_id)
         .order_by(Lead.created_at.desc(), Lead.id.desc())
     )
+    # Branch/Team/Ownership scoping (§93): sales sees only their own leads
+    if auth.role_key in ("sales",):
+        query = query.where(Lead.owner_id == auth.user_id)
     if stage:
         query = query.where(Lead.lifecycle_stage == stage)
     if owner_id:

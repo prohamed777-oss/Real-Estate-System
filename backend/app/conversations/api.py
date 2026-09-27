@@ -43,6 +43,9 @@ async def list_conversations(
         query = query.where(Conversation.channel == channel)
     if assigned_to_me:
         query = query.where(Conversation.assigned_user_id == auth.user_id)
+    # Branch/Team scoping: sales sees only their assigned conversations
+    if auth.role_key == "sales" and not assigned_to_me:
+        query = query.where(Conversation.assigned_user_id == auth.user_id)
     rows = (await session.execute(query)).all()
     return [
         {

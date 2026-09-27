@@ -116,7 +116,7 @@ class Notification(Base, UUIDPk):
     tenant_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), index=True)
     kind: Mapped[str] = mapped_column(String(30), default="in_app")  # in_app|email|sms|whatsapp
     recipient_type: Mapped[str] = mapped_column(String(20), default="user")  # user|person
-    recipient_id: Mapped[str | None] = mapped_column(String(64))
+    recipient_id: Mapped[str | None] = mapped_column(String(120))  # UUID string (user or person)
     title: Mapped[str | None] = mapped_column(String(300))
     body: Mapped[str | None] = mapped_column(Text)
     template: Mapped[str | None] = mapped_column(String(100))

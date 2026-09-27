@@ -91,6 +91,9 @@ async def list_opportunities(
         query = query.where(Opportunity.stage == stage)
     if mine:
         query = query.where(Opportunity.owner_id == auth.user_id)
+    # Branch/Team scoping: sales sees only their own opportunities
+    if auth.role_key == "sales" and not mine:
+        query = query.where(Opportunity.owner_id == auth.user_id)
     rows = (await session.execute(query.order_by(Opportunity.created_at.desc()).limit(limit))).scalars().all()
     return [
         {

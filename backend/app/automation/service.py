@@ -218,11 +218,23 @@ async def _advance_instance(session: AsyncSession, instance: JourneyInstance) ->
                                 "context": instance.context},
                 rule_name=journey.name,
             )
-        session.add(JourneyStepLog(
-            tenant_id=instance.tenant_id, instance_id=instance.id,
-            step_no=instance.current_step, step_type=step_type or "action",
-            payload=step.get("params", {}),
-        ))
+        # idempotency: check if this step was already logged (crash recovery)
+        from sqlalchemy import select as _sel
+
+        existing_log = (
+            await session.execute(
+                _sel(JourneyStepLog).where(
+                    JourneyStepLog.instance_id == instance.id,
+                    JourneyStepLog.step_no == instance.current_step,
+                )
+            )
+        ).scalar_one_or_none()
+        if existing_log is None:
+            session.add(JourneyStepLog(
+                tenant_id=instance.tenant_id, instance_id=instance.id,
+                step_no=instance.current_step, step_type=step_type or "action",
+                payload=step.get("params", {}),
+            ))
         instance.current_step += 1
     instance.status = "completed"
     instance.finished_at = datetime.now(UTC)
