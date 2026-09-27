@@ -107,8 +107,9 @@ async def resolve_user_context(claims: dict[str, Any]) -> tenancy.AuthContext:
 
 async def get_auth(request: Request) -> tenancy.AuthContext:
     """FastAPI dependency: authenticate and bind the request context."""
-    # Dev bypass (never in production)
-    if settings.auth_dev_enabled and not settings.is_production:
+    # Dev bypass — controlled entirely by the AUTH_DEV_ENABLED flag.
+    # Set AUTH_DEV_ENABLED=false in production to disable.
+    if settings.auth_dev_enabled:
         dev_email = request.headers.get("X-Dev-Email")
         if dev_email:
             claims = {"sub": await _dev_sub_for_email(dev_email)}
