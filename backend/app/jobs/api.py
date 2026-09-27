@@ -37,7 +37,12 @@ async def _tick(session: AsyncSession) -> dict[str, Any]:
     requeued = await requeue_expired_leases(session)
     outbox_stats = await dispatch_batch(session)
     job_stats = await run_batch(session)
-    return {"requeued_leases": requeued, "outbox": outbox_stats, "jobs": job_stats}
+    # A5: deliver queued email notifications
+    from app.automation.email_delivery import deliver_queued_notifications
+
+    emails_sent = await deliver_queued_notifications(session)
+    return {"requeued_leases": requeued, "outbox": outbox_stats, "jobs": job_stats,
+             "emails_sent": emails_sent}
 
 
 @router.api_route("/tick", methods=["GET", "POST"])

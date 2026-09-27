@@ -144,3 +144,13 @@ P1 fixes:
 - RLS completion: audit_log + claims + signals + projection_registry covered
 
 Tests: 110 green (13 hardening-specific). Tables: 95. RLS: 90 policies.
+
+## V4-3 Integration Wave ✅
+
+- Decision Plane routing replaces simple auto-assign (lead.created → Policy→Scoring→Optimization→Record)
+- Claims written automatically on price changes + availability changes (SYSTEM_DERIVED, auto-verified)
+- Email delivery pipeline wired into tick (Resend API — activate with RESEND_API_KEY)
+- SSE real-time in frontend inbox (replaces polling, fallback to polling on error)
+- Staleness tracking on search projections (advisory check on lead creation)
+- Duplicated lead auto-assign handler removed (Decision Plane handles it now)
+- Tests: 115 green

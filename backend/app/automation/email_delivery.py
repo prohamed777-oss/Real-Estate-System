@@ -12,11 +12,15 @@ import uuid
 from typing import Any
 
 import httpx
+from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.errors import ExternalProviderError
+from app.automation.models import Notification
+from app.organizations.models import User
+from app.organizations.models import User
 
 log = logging.getLogger("revenue_os.email")
 
@@ -51,36 +55,31 @@ async def send_email(
 
 async def deliver_queued_notifications(session: AsyncSession, *, limit: int = 20) -> int:
     """Send all queued email notifications that have a user email."""
-    from app.organizations.models import User
-
     rows = (
         await session.execute(
-            select(Any).select_from(1)
-        )
-    )
-    # simpler approach: query notifications joined with users
-    from app.automation.models import Notification
-    from app.organizations.models import User as UserT
-
-    rows = (
-        await session.execute(
-            select(Notification, UserT.email)
-            .join(UserT, UserT.id.cast(__import__("sqlalchemy").String) == Notification.recipient_id)
+            select(Notification)
             .where(
                 Notification.kind == "email",
                 Notification.status == "queued",
-                Notification.recipient_type == "user",
             )
             .limit(limit)
         )
-    ).all()
+    ).scalars().all()
     sent = 0
-    for notification, email in rows:
-        ok = await send_email(to_email=email, subject=notification.title or "Revenue OS",
-                              html=f"<p>{notification.body or ''}</p>")
+    for notification in rows:
+        user = (
+            await session.execute(
+                select(User).where(User.id == uuid.UUID(notification.recipient_id))
+            )
+        ).scalar_one_or_none()
+        if user is None or not user.email:
+            continue
+        ok = await send_email(to_email=user.email,
+                               subject=notification.title or "Revenue OS",
+                               html=f"<p>{notification.body or ''}</p>")
         if ok:
             notification.status = "sent"
-            notification.sent_at = __import__("datetime").datetime.now(__import__("datetime").UTC)
+            notification.sent_at = datetime.now(UTC)
             sent += 1
     await session.flush()
     return sent

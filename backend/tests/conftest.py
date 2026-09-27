@@ -137,6 +137,10 @@ async def _schema():
             END;
             $$ LANGUAGE plpgsql;
         """))
+    # Register ALL domain event/job handlers (normally done by app lifespan)
+    from app import bootstrap
+
+    bootstrap.load_all()
     # Seed global agent profiles (normally done by app lifespan)
     from app.core.db import session_factory as sf
 

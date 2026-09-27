@@ -22,6 +22,8 @@ HANDLER_MODULES = [
     "app.sales.handlers",
     "app.finance.handlers",
     "app.marketing.handlers",
+    "app.signals.handlers",
+    "app.signals.decision_handlers",
 ]
 
 

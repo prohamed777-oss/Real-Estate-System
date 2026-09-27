@@ -8,46 +8,18 @@ from app.events.registry import event_handler
 
 
 @event_handler("lead.created")
-async def on_lead_created(session, envelope):  # noqa: ANN001
-    """Auto-assign NEW leads to the tenant's default round-robin pool (M2 basic
-    routing; §28 expertise-based routing lands in M5)."""
+async def on_lead_created_sla(session, envelope):  # noqa: ANN001
+    """Start SLA tracking for the new lead (now handled by Decision Plane)."""
     payload = envelope["payload"]
-    if payload.get("owner_id") or not envelope.get("tenant_id"):
+    if not payload.get("lead_id") or not envelope.get("tenant_id"):
         return
-    from sqlalchemy import select
-
-    from app.leads.models import Lead
-    from app.leads.service import assign_lead
+    from app.automation.service import start_sla_tracker
 
     tenant_id = uuid.UUID(envelope["tenant_id"])
-    lead = (
-        await session.execute(
-            select(Lead).where(Lead.id == uuid.UUID(payload["lead_id"]), Lead.tenant_id == tenant_id)
-        )
-    ).scalar_one_or_none()
-    if lead is None or lead.owner_id is not None:
-        return
-    # Light-weight fallback: leave unassigned when no active sales members exist.
-    from app.organizations.models import Membership, Role, User
-
-    sales_users = (
-        await session.execute(
-            select(User.id)
-            .join(Membership, Membership.user_id == User.id)
-            .join(Role, Role.id == Membership.role_id)
-            .where(
-                User.tenant_id == tenant_id,
-                User.is_active.is_(True),
-                Role.key.in_(("sales", "sales_manager")),
-            )
-            .limit(1)
-        )
-    ).scalar_one_or_none()
-    if sales_users is not None:
-        await assign_lead(
-            session, lead=lead, owner_id=sales_users, actor_type="system",
-            reason="auto-assign on creation",
-        )
+    await start_sla_tracker(
+        session, tenant_id=tenant_id, entity_type="lead",
+        entity_id=uuid.UUID(payload["lead_id"]), trigger_event="lead.created",
+    )
 
 
 @event_handler("lead.qualified")
