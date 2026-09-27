@@ -17,9 +17,9 @@ from app.core.errors import ExternalProviderError
 
 MODEL_PROFILES: dict[str, dict[str, Any]] = {
     "gemini": {
-        "fast": {"model": "gemini-2.5-flash", "temperature": 0.2},
-        "standard": {"model": "gemini-2.5-flash", "temperature": 0.4},
-        "reasoning": {"model": "gemini-2.5-pro", "temperature": 0.3},
+        "fast": {"model": "gemini-3.8-flash", "temperature": 0.2},
+        "standard": {"model": "gemini-3.8-flash", "temperature": 0.4},
+        "reasoning": {"model": "gemini-3.8-pro", "temperature": 0.3},
     },
     "mock": {
         "fast": {"model": "mock-fast"},

@@ -56,7 +56,7 @@ class Settings(BaseSettings):
     # --- AI (Model Gateway) ---
     ai_provider: str = "mock"  # mock | gemini | openai_compatible
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-2.5-flash"
+    gemini_model: str = "gemini-3.8-flash"
     gemini_embedding_model: str = "text-embedding-004"
     embedding_dimensions: int = 768
     openai_compatible_base_url: str = ""
