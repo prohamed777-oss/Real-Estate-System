@@ -24,6 +24,9 @@ HANDLER_MODULES = [
     "app.marketing.handlers",
     "app.signals.handlers",
     "app.signals.decision_handlers",
+    # ops/maintenance handlers (retention etc.) must run in the runner process
+    # too, not only in the API process — otherwise those jobs dead-letter.
+    "app.jobs.ops_api",
 ]
 
 
