@@ -24,16 +24,34 @@ router = APIRouter(prefix="/internal/jobs", tags=["internal"])
 
 
 async def _tick(session: AsyncSession) -> dict[str, Any]:
-    # Daily retention enqueue (unique_key dedup → runs once per day per tenant-agnostic)
+    # Daily retention enqueue — runs once per day, tenant-agnostic.
+    # enqueue()'s dedupe only covers pending/running jobs, so the moment the
+    # day's job completes the slot frees and the next tick would enqueue it
+    # again (hundreds of redundant runs/day under a 1-min cron). Also treat
+    # today's COMPLETED job as "already done"; dead stays re-enqueueable so a
+    # failing day is not silently skipped (the monitor flags dead rows).
     from datetime import UTC, datetime
 
+    from sqlalchemy import select
+
+    from app.events.models import Job
     from app.events.queue import enqueue
 
     today = datetime.now(UTC).strftime("%Y-%m-%d")
-    await enqueue(
-        session, job_type="maintenance.retention", tenant_id=None,
-        payload={}, unique_key=f"retention-{today}",
+    already = await session.execute(
+        select(Job.id)
+        .where(
+            Job.type == "maintenance.retention",
+            Job.unique_key == f"retention-{today}",
+            Job.status.in_(("pending", "running", "completed")),
+        )
+        .limit(1)
     )
+    if already.scalar_one_or_none() is None:
+        await enqueue(
+            session, job_type="maintenance.retention", tenant_id=None,
+            payload={}, unique_key=f"retention-{today}",
+        )
     requeued = await requeue_expired_leases(session)
     outbox_stats = await dispatch_batch(session)
     job_stats = await run_batch(session)
