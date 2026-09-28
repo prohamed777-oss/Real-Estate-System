@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import hmac
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Header, Query, Request
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -38,7 +39,9 @@ async def meta_verify(
     """Meta webhook subscription handshake — verify token is deployment config."""
     from app.core.config import settings as cfg
 
-    if hub_mode == "subscribe" and hub_verify_token == cfg.meta_webhook_verify_token:
+    if hub_mode == "subscribe" and hmac.compare_digest(
+        hub_verify_token or "", cfg.meta_webhook_verify_token
+    ):
         return int(hub_challenge) if hub_challenge.isdigit() else hub_challenge
     raise ValidationFailed("Webhook verification failed")
 
@@ -141,10 +144,16 @@ class SimulatorInbound(BaseModel):
 
 @router.post("/simulator/inbound")
 async def simulator_inbound(
-    body: SimulatorInbound, session: AsyncSession = Depends(get_session)
+    body: SimulatorInbound, session: AsyncSession = Depends(get_session),
+    x_cron_secret: str = Header(default=""),
 ):
     if settings.is_production and not settings.test_mode:
         raise ValidationFailed("Simulator disabled (enable TEST_MODE for QA environments)")
+    if settings.is_production and not hmac.compare_digest(
+        x_cron_secret, settings.cron_secret
+    ):
+        # prod-QA mode still must not be an open cross-tenant injection endpoint
+        raise ValidationFailed("Simulator requires a valid X-Cron-Secret header")
     from app.organizations.models import Tenant
 
     tenant = (

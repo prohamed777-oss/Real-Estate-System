@@ -10,6 +10,7 @@ In production this is protected by the X-Cron-Secret header.
 
 from __future__ import annotations
 
+import secrets
 from typing import Any
 
 from fastapi import APIRouter, Header, HTTPException
@@ -66,7 +67,7 @@ async def _tick(session: AsyncSession) -> dict[str, Any]:
 @router.api_route("/tick", methods=["GET", "POST"])
 async def tick(x_cron_secret: str = Header(default="")) -> dict[str, Any]:
     """GET is used by Vercel Cron; POST by local runner and tests."""
-    if x_cron_secret != settings.cron_secret:
+    if not secrets.compare_digest(x_cron_secret, settings.cron_secret):
         raise HTTPException(status_code=401, detail="Invalid cron secret")
     async with session_factory() as session:
         async with session.begin():

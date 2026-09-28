@@ -11,6 +11,7 @@ Security boundary (§103):
 
 from __future__ import annotations
 
+import logging
 import uuid
 from typing import Any
 
@@ -107,10 +108,15 @@ async def resolve_user_context(claims: dict[str, Any]) -> tenancy.AuthContext:
 
 async def get_auth(request: Request) -> tenancy.AuthContext:
     """FastAPI dependency: authenticate and bind the request context."""
-    # Dev bypass — controlled entirely by the AUTH_DEV_ENABLED flag.
-    # Set AUTH_DEV_ENABLED=false in production to disable.
+    # Dev bypass — controlled by the AUTH_DEV_ENABLED flag, and never in
+    # production unless TEST_MODE=true (dedicated QA environments only).
     if settings.auth_dev_enabled:
         dev_email = request.headers.get("X-Dev-Email")
+        if dev_email and settings.is_production and not settings.test_mode:
+            logging.getLogger(__name__).warning(
+                "X-Dev-Email ignored: dev auth is disabled in production "
+                "(AUTH_DEV_ENABLED=true is not enough there)")
+            dev_email = None
         if dev_email:
             claims = {"sub": await _dev_sub_for_email(dev_email)}
             ctx = await resolve_user_context(claims)

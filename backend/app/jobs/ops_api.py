@@ -3,6 +3,7 @@ media upload abstraction (local dev disk / S3-compatible production)."""
 
 from __future__ import annotations
 
+import secrets
 import uuid
 from datetime import UTC, datetime
 from typing import Any
@@ -22,7 +23,7 @@ router = APIRouter(prefix="/ops", tags=["ops"])
 
 
 def _guard(x_cron_secret: str) -> None:
-    if x_cron_secret != settings.cron_secret:
+    if not secrets.compare_digest(x_cron_secret, settings.cron_secret):
         raise HTTPException(status_code=401, detail="Invalid ops secret")
 
 
