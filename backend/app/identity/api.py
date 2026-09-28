@@ -91,7 +91,11 @@ async def list_people(
     query = query.order_by(Person.created_at.desc(), Person.id.desc())
     rows = (await session.execute(query.limit(limit))).scalars().all()
     items = [_person_dict(p) for p in rows]
-    next_cursor = encode_cursor(created_at=rows[-1].created_at, id_=rows[-1].id) if len(items) == limit and rows else None
+    next_cursor = (
+        encode_cursor(created_at=rows[-1].created_at, id_=rows[-1].id)
+        if len(items) == limit and rows
+        else None
+    )
     return CursorPage(items=items, next_cursor=next_cursor, has_more=bool(next_cursor))
 
 

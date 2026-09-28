@@ -336,6 +336,8 @@ async def test_m9_importer_properties_flow(db, tenant, owner_ctx):
     assert job.error_rows == 1
     assert job.status == "partial"
     assets = (
-        await db.execute(select(func.count()).select_from(__import__("app.properties.models", fromlist=["PropertyAsset"]).PropertyAsset))
+        await db.execute(select(func.count()).select_from(
+            __import__("app.properties.models", fromlist=["PropertyAsset"]).PropertyAsset
+        ))
     ).scalar_one()
     assert assets == 1

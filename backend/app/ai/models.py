@@ -28,7 +28,8 @@ class AgentProfile(Base, UUIDPk, Timestamped):
     tenant_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("tenants.id"), index=True
     )  # NULL = global default template
-    key: Mapped[str] = mapped_column(String(60))  # reception|qualification|matching|scheduling|followup|reactivation|sales_copilot|manager_copilot|analytics
+    # reception|qualification|matching|scheduling|followup|reactivation|sales_copilot|manager_copilot|analytics
+    key: Mapped[str] = mapped_column(String(60))
     name: Mapped[str] = mapped_column(String(200))
     purpose: Mapped[str | None] = mapped_column(Text)
     system_prompt: Mapped[str] = mapped_column(Text)
@@ -71,7 +72,8 @@ class AIExecution(Base, UUIDPk):
     output_tokens: Mapped[int] = mapped_column(Integer, default=0)
     cost_usd: Mapped[float] = mapped_column(Float, default=0.0)
     latency_ms: Mapped[int] = mapped_column(Integer, default=0)
-    status: Mapped[str] = mapped_column(String(30), default="running")  # running|completed|failed|timeout|budget_exceeded|escalated|handoff
+    # running|completed|failed|timeout|budget_exceeded|escalated|handoff
+    status: Mapped[str] = mapped_column(String(30), default="running")
     outcome: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
     final_message: Mapped[str | None] = mapped_column(Text)
     guardrail_flags: Mapped[list] = mapped_column(JSONB, default=list)

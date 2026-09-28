@@ -22,7 +22,8 @@ class Document(Base, UUIDPk, Timestamped):
     tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tenants.id"), index=True)
     entity_type: Mapped[str | None] = mapped_column(String(60), index=True)
     entity_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), index=True)
-    kind: Mapped[str] = mapped_column(String(60))  # offer|reservation_form|contract|broker_agreement|commission_agreement|identity|property_doc
+    # offer|reservation_form|contract|broker_agreement|commission_agreement|identity|property_doc
+    kind: Mapped[str] = mapped_column(String(60))
     title: Mapped[str] = mapped_column(String(300))
     storage_path: Mapped[str | None] = mapped_column(Text)
     mime_type: Mapped[str | None] = mapped_column(String(120))
@@ -35,7 +36,8 @@ class Document(Base, UUIDPk, Timestamped):
     owner_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
     checksum: Mapped[str | None] = mapped_column(String(128))
     metadata_: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, default=dict)
-    extracted_facts: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)  # OCR/AI facts — NOT truth until approved (§85)
+    # OCR/AI facts — NOT truth until approved (§85)
+    extracted_facts: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
     facts_verified: Mapped[bool] = mapped_column(default=False)
 
 
@@ -48,7 +50,8 @@ class Contract(Base, UUIDPk, Timestamped):
     asset_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), index=True)
     buyer_person_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("people.id"))
     type: Mapped[str] = mapped_column(String(60), default="contract")
-    status: Mapped[str] = mapped_column(String(30), default="draft")  # draft|pending_signature|active|completed|terminated
+    # draft|pending_signature|active|completed|terminated
+    status: Mapped[str] = mapped_column(String(30), default="draft")
     effective_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     document_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("documents.id"))
@@ -88,10 +91,12 @@ class Payment(Base, UUIDPk, Timestamped):
     contract_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     person_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("people.id"))
     direction: Mapped[str] = mapped_column(String(10), default="inbound")  # inbound|outbound
-    kind: Mapped[str] = mapped_column(String(40), default="installment")  # deposit|installment|fee|refund|commission_payout
+    # deposit|installment|fee|refund|commission_payout
+    kind: Mapped[str] = mapped_column(String(40), default="installment")
     amount: Mapped[Decimal] = mapped_column(Numeric(18, 4))
     currency: Mapped[str] = mapped_column(String(3), default="EGP")
-    status: Mapped[str] = mapped_column(String(30), default="scheduled")  # scheduled|pending|completed|failed|refunded|cancelled
+    # scheduled|pending|completed|failed|refunded|cancelled
+    status: Mapped[str] = mapped_column(String(30), default="scheduled")
     due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     method: Mapped[str | None] = mapped_column(String(60))
@@ -123,7 +128,8 @@ class CommissionRule(Base, UUIDPk, Timestamped):
     name: Mapped[str] = mapped_column(String(200))
     scope: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)  # {project_id?, branch_id?, team_id?}
     basis: Mapped[str] = mapped_column(String(30), default="deal_value")  # deal_value|collected
-    splits: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)  # {agency, sales_rep, broker, referrer, developer} pcts
+    # {agency, sales_rep, broker, referrer, developer} pcts
+    splits: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
     valid_from: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     valid_to: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     is_active: Mapped[bool] = mapped_column(default=True)

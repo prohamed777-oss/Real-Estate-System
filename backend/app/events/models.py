@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import DateTime, Index, Integer, Numeric, String, Text, func
 from sqlalchemy import text as sqlalchemy_text

@@ -58,6 +58,7 @@ async def bootstrap(
     from sqlalchemy import select
 
     from app.organizations.models import Tenant
+    from app.organizations.provisioning import slugify
 
     slug_v = slugify(body.slug or body.tenant_name)
     existing = (

@@ -106,7 +106,10 @@ async def list_leads(
         query = query.where(Lead.lead_score >= min_score)
     if q:
         like = f"%{q.lower()}%"
-        query = query.where(func.lower(Person.full_name).like(like) | func.lower(func.coalesce(Person.phone, "")).like(like))
+        query = query.where(
+            func.lower(Person.full_name).like(like)
+            | func.lower(func.coalesce(Person.phone, "")).like(like)
+        )
     rows = (await session.execute(query.limit(limit))).all()
     items = [_lead_dict(lead, person) for lead, person in rows]
     next_cursor = (

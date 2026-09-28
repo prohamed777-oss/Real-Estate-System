@@ -120,8 +120,7 @@ async def test_lead_routing_decision_record(db, tenant, owner_ctx):
         person = Person(tenant_id=tenant.id, full_name="Route P", phone="+201555999999")
         db.add(person)
         await db.flush()
-        lead = await create_lead(db, tenant_id=tenant.id, person_id=person.id, source="test")
-        lead_id = lead.id
+        await create_lead(db, tenant_id=tenant.id, person_id=person.id, source="test")
 
     # dispatch outbox — triggers decision handler
     await _dispatch()

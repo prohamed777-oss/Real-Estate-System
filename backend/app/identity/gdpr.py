@@ -64,7 +64,10 @@ async def export_person_data(
                         for i in (await session.execute(
                             select(Identity).where(Identity.person_id == person_id)
                         )).scalars()],
-        "leads": [{"id": str(l.id), "stage": l.lifecycle_stage, "score": l.lead_score} for l in leads],
+        "leads": [
+            {"id": str(lead.id), "stage": lead.lifecycle_stage, "score": lead.lead_score}
+            for lead in leads
+        ],
         "conversations": [{"id": str(c.id), "channel": c.channel} for c in conversations],
         "messages": [{"direction": m.direction, "text": m.text,
                        "created_at": m.created_at.isoformat()} for m in messages],

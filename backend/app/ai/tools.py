@@ -158,7 +158,8 @@ def _safe_args(args: dict[str, Any]) -> dict[str, Any]:
 
 @tool(
     "search_properties",
-    "Search available properties using structured filters (city, area, type, bedrooms, budget). Returns real inventory only.",
+    "Search available properties using structured filters "
+    "(city, area, type, bedrooms, budget). Returns real inventory only.",
     {
         "type": "object",
         "properties": {

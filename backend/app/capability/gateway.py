@@ -168,7 +168,7 @@ async def register_webhook_destination(
 ) -> tuple[WebhookDestination, str]:
     """Register → PENDING_VERIFICATION with a challenge token.
     The URL becomes VERIFIED only after the challenge is answered."""
-    host = validate_webhook_url(url)  # permanent block, even before verification
+    validate_webhook_url(url)  # permanent block, even before verification
     token = secrets.token_urlsafe(32)
     dest = WebhookDestination(
         tenant_id=tenant_id, url=url, allowlist_status="PENDING_VERIFICATION",
@@ -227,7 +227,6 @@ async def install_marketplace_app(
     """Install = EXPLICIT consent screen equivalent: the tenant admin approves
     the exact scopes; each scope becomes its own expiring grant."""
     grants = []
-    now = datetime.now(UTC)
     for scope in requested_scopes:
         resource, _, action = scope.partition(":")
         grants.append(await issue_grant(

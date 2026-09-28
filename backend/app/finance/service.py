@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,6 +22,9 @@ from app.finance.models import (
     PaymentSchedule,
 )
 from app.sales.models import Opportunity, Reservation
+
+if TYPE_CHECKING:
+    from app.decision.models import CommissionSplit
 
 
 async def create_contract_from_reservation(

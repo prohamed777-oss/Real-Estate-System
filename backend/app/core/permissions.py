@@ -54,12 +54,23 @@ SETTINGS_WRITE = "settings:write"
 AUDIT_READ = "audit:read"
 IMPORT_RUN = "import:run"
 
-ALL_PERMISSIONS: list[str] = [v for k, v in sorted(globals().items()) if k.isupper() and k.startswith(("PEOPLE","LEADS","CONVERSATIONS","PROPERTIES","INVENTORY","LISTINGS","OPPORTUNITIES","VIEWINGS","OFFERS","RESERVATIONS","CONTRACTS","FINANCE","DEALS","MARKETING","AUTOMATION","AI_","ANALYTICS","TEAM","SETTINGS","AUDIT","IMPORT"))]
+_ALL_PREFIXES = (
+    "PEOPLE", "LEADS", "CONVERSATIONS", "PROPERTIES", "INVENTORY", "LISTINGS",
+    "OPPORTUNITIES", "VIEWINGS", "OFFERS", "RESERVATIONS", "CONTRACTS", "FINANCE",
+    "DEALS", "MARKETING", "AUTOMATION", "AI_", "ANALYTICS", "TEAM", "SETTINGS",
+    "AUDIT", "IMPORT",
+)
+
+ALL_PERMISSIONS: list[str] = [
+    v for k, v in sorted(globals().items())
+    if k.isupper() and k.startswith(_ALL_PREFIXES)
+]
 
 # --- System roles (seeded per tenant at provisioning, idempotent) ---
 SYSTEM_ROLES: dict[str, list[str]] = {
     "owner": ALL_PERMISSIONS,
-    "admin": [p for p in ALL_PERMISSIONS if p != "settings:write" or True],  # admin = owner minus billing actions (future)
+    # admin = owner minus billing actions (future)
+    "admin": list(ALL_PERMISSIONS),
     "sales_manager": [
         LEADS_READ, LEADS_WRITE, PEOPLE_READ, PEOPLE_WRITE, CONVERSATIONS_READ, CONVERSATIONS_WRITE,
         PROPERTIES_READ, INVENTORY_READ, INVENTORY_WRITE, LISTINGS_READ,
@@ -77,7 +88,8 @@ SYSTEM_ROLES: dict[str, list[str]] = {
     ],
     "marketing": [
         LEADS_READ, LEADS_WRITE, PEOPLE_READ, MARKETING_READ, MARKETING_WRITE,
-        PROPERTIES_READ, LISTINGS_READ, LISTINGS_WRITE, ANALYTICS_READ, AI_READ, AI_RUN, AUTOMATION_READ, AUTOMATION_WRITE, IMPORT_RUN,
+        PROPERTIES_READ, LISTINGS_READ, LISTINGS_WRITE, ANALYTICS_READ,
+        AI_READ, AI_RUN, AUTOMATION_READ, AUTOMATION_WRITE, IMPORT_RUN,
     ],
     "finance": [
         DEALS_READ, DEALS_WRITE, FINANCE_READ, FINANCE_WRITE, CONTRACTS_READ, CONTRACTS_WRITE,

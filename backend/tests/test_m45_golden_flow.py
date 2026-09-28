@@ -122,7 +122,6 @@ async def test_full_golden_flow_lead_to_reservation(db, tenant, owner_ctx):
             scheduled_at=datetime.now(UTC) + timedelta(days=2),
             salesperson_id=owner_ctx.user_id, actor_id=owner_ctx.user_id,
         )
-        viewing_id = viewing.id
     assert viewing.scheduled_at.tzinfo is not None
 
     # naive datetime rejected (review rule: no tz-less times)

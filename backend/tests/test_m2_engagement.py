@@ -48,8 +48,12 @@ async def test_golden_inbound_creates_person_conversation_lead(db, tenant, owner
     assert result2["conversation_new"] is False
     assert result2["lead_id"] is None  # open lead already exists
 
-    persons = (await db.execute(select(func_count := __import__("sqlalchemy").func.count()).select_from(Person))).scalar_one()
-    conversations = (await db.execute(select(__import__("sqlalchemy").func.count()).select_from(Conversation))).scalar_one()
+    persons = (await db.execute(
+        select(__import__("sqlalchemy").func.count()).select_from(Person)
+    )).scalar_one()
+    conversations = (await db.execute(
+        select(__import__("sqlalchemy").func.count()).select_from(Conversation)
+    )).scalar_one()
     leads = (await db.execute(select(__import__("sqlalchemy").func.count()).select_from(Lead))).scalar_one()
     messages = (await db.execute(select(__import__("sqlalchemy").func.count()).select_from(Message))).scalar_one()
     assert persons == 1
@@ -146,7 +150,7 @@ async def test_opt_out_blocks_marketing_but_ai_cannot_bypass(db, tenant, owner_c
 
 async def test_lead_lifecycle_via_state_machine(db, tenant, owner_ctx):
     async with db.begin():
-        result = await process_inbound_message(db, tenant_id=tenant.id, msg=_msg())
+        await process_inbound_message(db, tenant_id=tenant.id, msg=_msg())
         lead = (await db.execute(select(Lead))).scalar_one()
         assert lead.lifecycle_stage == "NEW"
 
@@ -167,7 +171,7 @@ async def test_lead_lifecycle_via_state_machine(db, tenant, owner_ctx):
 
 async def test_scoring_engine_records_version_and_signals(db, tenant, owner_ctx):
     async with db.begin():
-        result = await process_inbound_message(db, tenant_id=tenant.id, msg=_msg())
+        await process_inbound_message(db, tenant_id=tenant.id, msg=_msg())
         lead = (await db.execute(select(Lead))).scalar_one()
         await recompute_scores(db, lead=lead)
     assert lead.score_version == "v1-heuristic"

@@ -20,7 +20,8 @@ class ImportJob(Base, UUIDPk, Timestamped):
     kind: Mapped[str] = mapped_column(String(40))  # properties | people | leads
     filename: Mapped[str | None] = mapped_column(String(300))
     mapping: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)  # column → field
-    status: Mapped[str] = mapped_column(String(20), default="pending")  # pending|validating|running|completed|failed|partial
+    # pending|validating|running|completed|failed|partial
+    status: Mapped[str] = mapped_column(String(20), default="pending")
     total_rows: Mapped[int] = mapped_column(Integer, default=0)
     ok_rows: Mapped[int] = mapped_column(Integer, default=0)
     error_rows: Mapped[int] = mapped_column(Integer, default=0)

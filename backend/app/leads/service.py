@@ -98,7 +98,6 @@ async def transition_lead(
     target = sm.fire(event)
     before = {"lifecycle_stage": lead.lifecycle_stage}
     lead.lifecycle_stage = target
-    now_fields: dict[str, Any] = {}
     if target == "DORMANT":
         from datetime import UTC, datetime
 

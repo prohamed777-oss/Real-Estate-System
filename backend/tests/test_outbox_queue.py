@@ -63,7 +63,7 @@ async def test_committed_event_survives_and_dispatches(db, tenant):
     assert seen == [{"x": 1}]
 
     # re-dispatch must NOT re-handle (exactly-once, §48)
-    stats2 = await _dispatch_in_new_session()
+    await _dispatch_in_new_session()
     assert seen == [{"x": 1}]  # handler did NOT run again
     row = await _fetch_event("test.seen")
     assert row.status == "processed"

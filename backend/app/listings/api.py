@@ -57,12 +57,12 @@ async def list_listings(
     rows = (await session.execute(query.order_by(Listing.created_at.desc()).limit(limit))).scalars().all()
     return [
         {
-            "id": str(l.id), "asset_id": str(l.asset_id), "title": l.title,
-            "description": l.description,
-            "asking_price": str(l.asking_price_amount) if l.asking_price_amount else None,
-            "asking_price_currency": l.asking_price_currency, "status": l.status,
+            "id": str(listing.id), "asset_id": str(listing.asset_id), "title": listing.title,
+            "description": listing.description,
+            "asking_price": str(listing.asking_price_amount) if listing.asking_price_amount else None,
+            "asking_price_currency": listing.asking_price_currency, "status": listing.status,
         }
-        for l in rows
+        for listing in rows
     ]
 
 

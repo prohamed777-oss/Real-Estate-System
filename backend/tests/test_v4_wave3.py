@@ -78,7 +78,7 @@ async def test_ai_context_includes_only_verified_claims(db, tenant, owner_ctx):
         db.add(person)
         await db.flush()
         pid = person.id
-        unverified = await assert_claim(
+        await assert_claim(
             db, tenant_id=tenant.id, entity_type="lead", entity_id=uuid.uuid4(),
             field="max_budget", value="9,000,000", source="whatsapp",
             assertion_type="EXTRACTED",  # untrusted → UNVERIFIED

@@ -97,7 +97,6 @@ async def requeue_dead_event(
 
 # ---------- periodic retention (keeps hot tables lean) ----------
 async def run_retention(session: AsyncSession) -> dict[str, int]:
-    cutoff = datetime.now(UTC)
     res = await session.execute(text(
         "DELETE FROM webhook_events WHERE received_at < now() - interval '30 days' RETURNING id"
     ))

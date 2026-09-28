@@ -203,7 +203,7 @@ async def _advance_instance(session: AsyncSession, instance: JourneyInstance) ->
                 return
             continue
         # action step
-        executed = await apply_rules_for_event(
+        await apply_rules_for_event(
             session, tenant_id=instance.tenant_id, event_name="journey.step",
             payload={"instance_id": str(instance.id),
                       "entity_type": instance.entity_type,

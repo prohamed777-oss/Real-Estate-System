@@ -7,7 +7,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, EmailStr
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.audit import audit
@@ -251,15 +251,16 @@ async def list_audit(
     entity_type: str | None = None,
     action: str | None = None,
 ) -> CursorPage:
-    q = select(AuditLog).where(AuditLog.tenant_id == auth.tenant_id).order_by(AuditLog.occurred_at.desc(), AuditLog.id.desc())
+    q = (
+        select(AuditLog)
+        .where(AuditLog.tenant_id == auth.tenant_id)
+        .order_by(AuditLog.occurred_at.desc(), AuditLog.id.desc())
+    )
     if entity_type:
         q = q.where(AuditLog.entity_type == entity_type)
     if action:
         q = q.where(AuditLog.action == action)
     rows = (await session.execute(q.limit(limit))).scalars().all()
-    total = (await session.execute(
-        select(func.count()).select_from(AuditLog).where(AuditLog.tenant_id == auth.tenant_id)
-    )).scalar_one()
     items = [
         {"id": str(r.id), "actor_type": r.actor_type, "actor_id": r.actor_id, "action": r.action,
          "entity_type": r.entity_type, "entity_id": r.entity_id, "before": r.before, "after": r.after,

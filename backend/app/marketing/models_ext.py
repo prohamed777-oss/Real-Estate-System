@@ -18,7 +18,8 @@ class MarketingAsset(Base, UUIDPk, Timestamped):
     __table_args__ = (Index("ix_marketing_assets_status", "tenant_id", "status"),)
 
     tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tenants.id"), index=True)
-    kind: Mapped[str] = mapped_column(String(60))  # listing_title|listing_description|whatsapp_copy|instagram_caption|ad_copy|email_copy|video_script
+    # listing_title|listing_description|whatsapp_copy|instagram_caption|ad_copy|email_copy|video_script
+    kind: Mapped[str] = mapped_column(String(60))
     language: Mapped[str] = mapped_column(String(10), default="ar")
     brief: Mapped[str | None] = mapped_column(Text)
     content: Mapped[str] = mapped_column(Text)

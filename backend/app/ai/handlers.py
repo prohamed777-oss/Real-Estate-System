@@ -32,7 +32,7 @@ async def embed_knowledge_job(session, tenant_id, payload):  # noqa: ANN001
             doc.status = "ready"
             continue
         vectors = await provider.embed(chunks)
-        for i, (chunk, vec) in enumerate(zip(chunks, vectors)):
+        for i, (chunk, vec) in enumerate(zip(chunks, vectors, strict=False)):
             session.add(
                 KnowledgeChunk(
                     tenant_id=tenant_id, doc_id=doc.id, chunk_no=i, text=chunk, embedding=vec,

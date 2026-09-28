@@ -16,10 +16,18 @@ async def test_provision_creates_full_structure(db):
             slug="alpha",
         )
     assert tenant.slug == "alpha"
-    org_count = (await db.execute(select(func.count()).select_from(Organization).where(Organization.tenant_id == tenant.id))).scalar_one()
-    branch_count = (await db.execute(select(func.count()).select_from(Branch).where(Branch.tenant_id == tenant.id))).scalar_one()
-    role_count = (await db.execute(select(func.count()).select_from(Role).where(Role.tenant_id == tenant.id))).scalar_one()
-    flag_count = (await db.execute(select(func.count()).select_from(FeatureFlag).where(FeatureFlag.tenant_id == tenant.id))).scalar_one()
+    org_count = (await db.execute(
+        select(func.count()).select_from(Organization).where(Organization.tenant_id == tenant.id)
+    )).scalar_one()
+    branch_count = (await db.execute(
+        select(func.count()).select_from(Branch).where(Branch.tenant_id == tenant.id)
+    )).scalar_one()
+    role_count = (await db.execute(
+        select(func.count()).select_from(Role).where(Role.tenant_id == tenant.id)
+    )).scalar_one()
+    flag_count = (await db.execute(
+        select(func.count()).select_from(FeatureFlag).where(FeatureFlag.tenant_id == tenant.id)
+    )).scalar_one()
     membership = (await db.execute(select(Membership).where(Membership.tenant_id == tenant.id))).scalar_one()
     assert org_count == 1
     assert branch_count == 1

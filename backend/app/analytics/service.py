@@ -173,7 +173,9 @@ INTENT_PATTERNS: list[dict[str, Any]] = [
     {"key": "budget_filter", "patterns": ["ميزانيته", "ميزانية", "budget", "فوق", "أقل من", "under", "over"],
      "extract": "budget"},
     {"key": "bedrooms_filter", "patterns": ["غرف", "غرفة", "bedrooms", "bedroom"], "extract": "bedrooms"},
-    {"key": "no_contact", "patterns": ["مححدش كلمه", "محدش كلم", "no contact", "لم يتم التواصل", "كلمه"], "extract": "no_contact_days"},
+    {"key": "no_contact",
+     "patterns": ["مححدش كلمه", "محدش كلم", "no contact", "لم يتم التواصل", "كلمه"],
+     "extract": "no_contact_days"},
     {"key": "area_filter", "patterns": ["منطقة", "في", "منطقه", "area"], "extract": "area"},
     {"key": "stage_filter", "patterns": ["مؤهل", "qualified", "جديد", "new", "خامل", "dormant"], "extract": "stage"},
 ]

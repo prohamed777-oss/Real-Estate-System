@@ -127,7 +127,7 @@ async def test_staleness_contract_degrades_critical_path(db, tenant):
             max_staleness_ms=1000, critical_path=False,
         )
         # simulate lag: last processed 60s ago
-        row = (
+        (
             await db.execute(
                 __import__("sqlalchemy").text(
                     "UPDATE projection_registry SET last_event_processed_at = now() - interval '60 seconds' "

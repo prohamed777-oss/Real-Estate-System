@@ -18,7 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.audit import audit
-from app.core.errors import NotFound, ValidationFailed
+from app.core.errors import Conflict, NotFound, ValidationFailed
 from app.events.outbox import emit
 from app.properties.models import PropertyAsset, UnitInventory
 from app.properties.models_ext import InventoryConflict

@@ -10,14 +10,11 @@ import base64
 import json
 import uuid
 from datetime import UTC, datetime
-from typing import Generic, TypeVar
 
 from pydantic import BaseModel
 
-T = TypeVar("T")
 
-
-class CursorPage(BaseModel, Generic[T]):
+class CursorPage[T](BaseModel):
     items: list[T]
     next_cursor: str | None = None
     has_more: bool = False

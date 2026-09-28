@@ -241,7 +241,8 @@ async def test_commission_splits_db_invariant(db, tenant, owner_ctx):
 
         with pytest.raises(Exception) as exc:
             await db.execute(st("""
-                INSERT INTO commission_splits (id, deal_id, tenant_id, party_role, party_id, share_percentage, created_at)
+                INSERT INTO commission_splits
+                    (id, deal_id, tenant_id, party_role, party_id, share_percentage, created_at)
                 VALUES (gen_random_uuid(), :deal, :tenant, 'broker', NULL, 20, now())
             """), {"deal": deal_id, "tenant": tenant.id})
         assert "must be exactly 100.00" in str(exc.value)

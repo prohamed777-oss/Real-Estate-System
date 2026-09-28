@@ -106,7 +106,7 @@ async def embed_search_documents(session: AsyncSession, *, tenant_id: uuid.UUID,
     provider = get_embedding_provider()
     texts = [_doc_text(r.doc) for r in rows]
     vectors = await provider.embed(texts)
-    for row, vec in zip(rows, vectors):
+    for row, vec in zip(rows, vectors, strict=False):
         row.embedding = vec
         row.embedding_model = provider.name
         row.embedded_at = datetime.now(UTC)

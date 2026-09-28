@@ -161,7 +161,6 @@ async def transition_viewing(
     feedback: dict | None = None,
 ) -> Viewing:
     sm = ViewingStateMachine(viewing.status)
-    before_status = viewing.status
     before_time = viewing.scheduled_at
     sm.fire(event)
     viewing.status = sm.state

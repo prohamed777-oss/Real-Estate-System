@@ -50,7 +50,7 @@ class MockEmbeddingProvider(EmbeddingProvider):
             vec = [0.0] * self.dimensions
             for token in tokens:
                 tv = self._token_vector(token)
-                vec = [a + b for a, b in zip(vec, tv)]
+                vec = [a + b for a, b in zip(vec, tv, strict=False)]
             norm = math.sqrt(sum(x * x for x in vec)) or 1.0
             out.append([x / norm for x in vec])
         return out

@@ -40,7 +40,9 @@ testpaths = ["tests"]
 filterwarnings = ["ignore::DeprecationWarning"]
 
 [tool.ruff]
-line-length = 100
+# 120 matches what the codebase actually does in practice; 100 was never
+# enforced (see docs/decisions.md and the 2026-09 lint cleanup).
+line-length = 120
 target-version = "py312"
 
 [tool.ruff.lint]
