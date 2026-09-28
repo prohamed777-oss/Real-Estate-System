@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -126,7 +126,7 @@ async def list_executions(
     auth: AuthContext = Depends(require(AI_READ)),
     session: AsyncSession = Depends(get_session),
     agent_key: str | None = None,
-    limit: int = 50,
+    limit: int = Query(50, ge=1, le=200),
 ) -> list[dict[str, Any]]:
     """AI Action Ledger view (§95)."""
     query = select(AIExecution).where(AIExecution.tenant_id == auth.tenant_id)

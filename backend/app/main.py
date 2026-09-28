@@ -22,6 +22,11 @@ log = logging.getLogger("revenue_os")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     log.info("starting %s (env=%s)", settings.app_name, settings.app_env)
+    if settings.is_production and settings.auth_dev_enabled:
+        log.critical(
+            "AUTH_DEV_ENABLED=true in production: X-Dev-Email lets ANYONE "
+            "impersonate any email WITHOUT a password. Set AUTH_DEV_ENABLED=false "
+            "in the production environment immediately.")
     from app.core.observability import init_sentry
 
     init_sentry()

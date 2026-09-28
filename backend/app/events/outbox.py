@@ -114,8 +114,10 @@ async def dispatch_batch(session: AsyncSession, *, batch: int = 100) -> dict[str
         row = (await session.execute(select(OutboxEvent).where(OutboxEvent.id == event_id))).scalar_one()
         # tenant GUC for this unit of work (RLS-ready workers, §82)
         if row.tenant_id is not None:
+            # transaction-local: is_local=false leaked the tenant onto the pooled
+            # connection after commit (stale GUC for the next borrower, §82)
             await session.execute(
-                text("SELECT set_config('app.tenant_id', :tid, false)"),
+                text("SELECT set_config('app.tenant_id', :tid, true)"),
                 {"tid": str(row.tenant_id)},
             )
         try:

@@ -239,6 +239,8 @@ async def capture_visitor(
         raise NotFound("Session not found")
 
     person = await session.get(Person, identity.person_id)
+    if person is None:
+        raise NotFound("Visitor identity has no person record")
     person.full_name = body.name
     person.phone = body.phone
     person.email = body.email

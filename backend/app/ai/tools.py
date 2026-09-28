@@ -11,6 +11,7 @@ availability from canonical inventory (§1.2, §60).
 
 from __future__ import annotations
 
+import logging
 import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
@@ -62,6 +63,9 @@ def tool(name: str, description: str, schema: dict[str, Any],
 def tools_for_scopes(scopes: list[str] | None) -> list[Tool]:
     if not scopes:
         return list(TOOLS.values())
+    unknown = [s for s in scopes if s not in TOOLS]
+    if unknown:
+        logging.getLogger(__name__).warning("unknown tool scopes dropped: %s", unknown)
     return [TOOLS[s] for s in scopes if s in TOOLS]
 
 
@@ -145,6 +149,8 @@ async def execute_tool(
     except DomainError:
         raise
     except Exception as exc:  # noqa: BLE001 — tool failures are reported to the model
+        logging.getLogger(__name__).warning("tool %s failed: %s: %s",
+                                            tool_name, type(exc).__name__, exc)
         return {"ok": False, "tool": tool_name, "error": f"{type(exc).__name__}: {exc}"[:300]}
 
 

@@ -7,6 +7,7 @@ record, and every projection tracks its staleness contract.
 
 from __future__ import annotations
 
+import logging
 import uuid
 
 from app.events.registry import event_handler
@@ -74,5 +75,6 @@ async def on_lead_created_staleness(session, envelope):  # noqa: ANN001
         await check_projection_staleness(
             session, tenant_id=tenant_id, projection_name="property_search_documents"
         )
-    except Exception:  # noqa: BLE001 — staleness check is advisory
-        pass
+    except Exception:  # noqa: BLE001 — advisory, but never silently
+        logging.getLogger(__name__).warning(
+            "projection staleness check failed (tenant=%s)", tenant_id, exc_info=True)

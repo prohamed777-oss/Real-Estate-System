@@ -192,7 +192,11 @@ async def check_projection_staleness(session: AsyncSession, *, tenant_id: uuid.U
     if row is None:
         raise NotFound("Projection not registered")
     now = datetime.now(UTC)
-    if row.last_event_processed_at is not None:
+    if row.last_event_processed_at is None:
+        # a projection that has NEVER processed an event is stale by
+        # definition, not silently healthy (V4 4.7)
+        row.current_lag_ms = row.max_staleness_ms + 1
+    else:
         row.current_lag_ms = int((now - row.last_event_processed_at).total_seconds() * 1000)
     within = row.current_lag_ms <= row.max_staleness_ms
     if not within and row.critical_path:

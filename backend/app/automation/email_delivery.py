@@ -51,7 +51,12 @@ async def send_email(
 
 
 async def deliver_queued_notifications(session: AsyncSession, *, limit: int = 20) -> int:
-    """Send all queued email notifications that have a user email."""
+    """Send all queued email notifications that have a user email.
+
+    FOR UPDATE SKIP LOCKED claims rows so two overlapping ticks cannot
+    double-send; rows with a malformed/unknown recipient are marked failed so
+    one poison record cannot block the queue head-of-line forever.
+    """
     rows = (
         await session.execute(
             select(Notification)
@@ -60,20 +65,37 @@ async def deliver_queued_notifications(session: AsyncSession, *, limit: int = 20
                 Notification.status == "queued",
             )
             .limit(limit)
+            .with_for_update(skip_locked=True)
         )
     ).scalars().all()
     sent = 0
     for notification in rows:
-        user = (
-            await session.execute(
-                select(User).where(User.id == uuid.UUID(notification.recipient_id))
-            )
-        ).scalar_one_or_none()
-        if user is None or not user.email:
+        try:
+            user = (
+                await session.execute(
+                    select(User).where(User.id == uuid.UUID(notification.recipient_id))
+                )
+            ).scalar_one_or_none()
+        except (TypeError, ValueError):
+            # recipient_id is free text populated from rule JSON — a malformed
+            # value must not poison-pill the whole tick (V4 audit)
+            notification.status = "failed"
+            log.warning("notification %s: malformed recipient_id %r",
+                        notification.id, notification.recipient_id)
             continue
-        ok = await send_email(to_email=user.email,
-                               subject=notification.title or "Revenue OS",
-                               html=f"<p>{notification.body or ''}</p>")
+        if user is None or not user.email:
+            notification.status = "failed"
+            log.warning("notification %s: no user/email for recipient %r — failed",
+                        notification.id, notification.recipient_id)
+            continue
+        try:
+            ok = await send_email(to_email=user.email,
+                                   subject=notification.title or "Revenue OS",
+                                   html=f"<p>{notification.body or ''}</p>")
+        except Exception as exc:  # noqa: BLE001 — one bad row must not kill the tick
+            log.error("notification %s: send raised %s: %s",
+                      notification.id, type(exc).__name__, exc)
+            ok = False
         if ok:
             notification.status = "sent"
             notification.sent_at = datetime.now(UTC)

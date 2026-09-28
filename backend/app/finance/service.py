@@ -148,6 +148,10 @@ async def schedule_payment_plan(
 ) -> list[PaymentSchedule]:
     """Generate the installment schedule from a payment plan (§37)."""
     total = Decimal(str(total_amount))
+    if installment_count <= 0:
+        raise ValidationFailed("installment_count must be >= 1")
+    if down_payment_pct is not None and not (Decimal("0") <= down_payment_pct <= Decimal("100")):
+        raise ValidationFailed("down_payment_pct must be between 0 and 100")
     down = (total * down_payment_pct / 100) if down_payment_pct else Decimal("0")
     remaining = total - down
     per_installment = (remaining / installment_count).quantize(Decimal("0.0001"))
@@ -184,8 +188,11 @@ async def record_payment(
     schedule_id: uuid.UUID | None = None, method: str | None = None,
     actor_id=None,
 ) -> Payment:
+    amount_dec = Decimal(str(amount))
+    if amount_dec <= 0:
+        raise ValidationFailed("payment amount must be positive")
     payment = Payment(
-        tenant_id=tenant_id, deal_id=deal_id, amount=Decimal(str(amount)),
+        tenant_id=tenant_id, deal_id=deal_id, amount=amount_dec,
         currency=currency, kind=kind, status="completed", paid_at=datetime.now(UTC),
         method=method,
     )
@@ -195,6 +202,8 @@ async def record_payment(
         row = await session.get(PaymentSchedule, schedule_id)
         if row is None or row.tenant_id != tenant_id:
             raise NotFound("Schedule row not found for this tenant")
+        if row.status == "completed":
+            raise Conflict("Schedule row already has a completed payment")
         row.status = "completed"
         row.payment_id = payment.id
     await audit(
@@ -224,6 +233,17 @@ async def calculate_commissions(
     if deal.status != "WON":
         raise Conflict("Commissions are calculated on WON deals only",
                        details={"deal_status": deal.status})
+    # idempotency: a second calculate call must not double-payout — this table
+    # has no unique constraint on deal_id, so we return the existing rows
+    existing = (
+        await session.execute(
+            select(Commission).where(
+                Commission.tenant_id == tenant_id, Commission.deal_id == deal_id
+            )
+        )
+    ).scalars().all()
+    if existing:
+        return list(existing)
     basis_amount = deal.gross_value or Decimal("0")
     rules = (
         await session.execute(
@@ -234,16 +254,19 @@ async def calculate_commissions(
     ).scalars().all()
     if not rules:
         raise ValidationFailed("No active commission rules configured")
-    # scope precedence (V4 audit #17): project/branch-specific > global, latest wins
+    # scope precedence (V4 audit #17): project/branch-specific > global, latest
+    # wins — enforced deterministically instead of relying on row order
     from app.finance.models import Deal as DealRow
 
     deal_row = await session.get(DealRow, deal_id)
-    scoped = [
-        r for r in rules
-        if not r.scope  # global
-        or r.scope.get("project_id") == str(getattr(deal_row, "asset_id", "") or "")
-    ]
-    rule = scoped[0] if scoped else rules[0]
+    project_id = str(getattr(deal_row, "asset_id", "") or "")
+
+    def _rule_rank(r: CommissionRule) -> tuple[int, Any]:
+        project_specific = bool(r.scope and r.scope.get("project_id") == project_id and project_id)
+        ts = r.created_at or datetime.min.replace(tzinfo=UTC)
+        return (1 if project_specific else 0, ts)
+
+    rule = sorted(rules, key=_rule_rank, reverse=True)[0]
     created: list[Commission] = []
     for beneficiary_type, pct in rule.splits.items():
         if not pct:

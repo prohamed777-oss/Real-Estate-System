@@ -6,6 +6,7 @@ No new features — just closing the automation loop.
 
 from __future__ import annotations
 
+import logging
 import uuid
 
 from app.events.registry import event_handler
@@ -117,8 +118,9 @@ async def on_opportunity_created(session, envelope):  # noqa: ANN001
         await check_projection_staleness(
             session, tenant_id=tenant_id, projection_name="property_search_documents"
         )
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception:  # noqa: BLE001 — advisory, but never silently
+        logging.getLogger(__name__).warning(
+            "projection staleness check failed (tenant=%s)", tenant_id, exc_info=True)
 
 
 @event_handler("viewing.requested")
